@@ -3,7 +3,7 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: #131722;
+  background: #0d1017;
   color: #d1d4dc;
   font-family: "Segoe UI", Arial, sans-serif;
 }
@@ -12,8 +12,9 @@ html, body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid #2a2e39;
+  padding: 16px 28px;
+  border-bottom: 1px solid #22262f;
+  background: #131722;
 }
 
 .topo h1 {
@@ -44,173 +45,197 @@ html, body {
 }
 
 main {
-  padding: 20px;
-  max-width: 720px;
+  padding: 24px 28px 40px;
+  max-width: 880px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
-.painel-preco {
-  background: #1c2129;
-  border: 1px solid #2a2e39;
-  border-radius: 10px;
-  padding: 20px;
-}
+/* ---- hero (preço + viés) ---- */
 
-.preco-atual {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.preco-rotulo {
-  font-size: 13px;
-  color: #8a8a8a;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.preco-valor {
-  font-size: 40px;
-  font-weight: 700;
-  color: #d1d4dc;
-  font-variant-numeric: tabular-nums;
-}
-
-.preco-horario {
-  font-size: 12.5px;
-  color: #666;
-}
-
-.regioes-proximas {
+.hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
 }
 
-.card-regiao {
+.hero-preco,
+.hero-vies {
   background: #131722;
-  border: 1px solid #2a2e39;
-  border-radius: 8px;
-  padding: 14px;
+  border: 1px solid #22262f;
+  border-radius: 10px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.card-rotulo {
+.hero-rotulo {
   font-size: 12px;
   color: #8a8a8a;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 8px;
+  letter-spacing: 0.6px;
 }
 
-.card-conteudo {
-  font-size: 14px;
-  line-height: 1.5;
+.hero-valor {
+  font-size: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
-.card-conteudo.vazio {
+.hero-horario {
+  font-size: 12px;
   color: #666;
+}
+
+.hero-vies-valor {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.hero-vies-valor.alta { color: #26a69a; }
+.hero-vies-valor.baixa { color: #ef5350; }
+.hero-vies-valor.neutro { color: #d19a3d; }
+
+/* ---- banners ---- */
+
+.banner-dentro-regiao {
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.banner-dentro-regiao.compra { background: rgba(38, 166, 154, 0.12); color: #26a69a; border: 1px solid #26a69a; }
+.banner-dentro-regiao.venda { background: rgba(239, 83, 80, 0.12); color: #ef5350; border: 1px solid #ef5350; }
+
+.painel-aguardando {
+  border-radius: 8px;
+  padding: 14px 18px;
+  border: 1px solid;
+}
+
+.painel-aguardando.compra { background: rgba(38, 166, 154, 0.06); border-color: #26a69a; }
+.painel-aguardando.venda { background: rgba(239, 83, 80, 0.06); border-color: #ef5350; }
+
+.aguardando-rotulo {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.75;
+  margin-bottom: 5px;
+}
+
+.aguardando-conteudo {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---- cartões genéricos ---- */
+
+.cartao {
+  background: #131722;
+  border: 1px solid #22262f;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.cartao h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a8a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 14px;
+}
+
+.cartao h2.titulo-compra { color: #26a69a; }
+.cartao h2.titulo-venda { color: #ef5350; }
+
+/* ---- tabelas ---- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+thead th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #666;
+  font-weight: 600;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid #22262f;
+}
+
+.tabela-leitura thead th.col-compra { color: #26a69a; }
+.tabela-leitura thead th.col-venda { color: #ef5350; }
+
+tbody td {
+  padding: 10px;
+  border-bottom: 1px solid #1a1e27;
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover td {
+  background: #171b25;
+}
+
+.linha-vazia {
+  color: #555;
+  text-align: center;
+  font-style: italic;
+}
+
+.leitura-conclusao {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  padding-top: 12px;
+  border-top: 1px solid #22262f;
+}
+
+.leitura-conclusao.alta { color: #26a69a; }
+.leitura-conclusao.baixa { color: #ef5350; }
+.leitura-conclusao.neutro { color: #d19a3d; }
+
+/* ---- grade de regiões (2 colunas) ---- */
+
+.grade-regioes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .hero,
+  .grade-regioes {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tag-operacao {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  margin-right: 8px;
 }
 
 .tag-operacao.compra { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
 .tag-operacao.venda { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
 
-.regiao-faixa {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.regiao-detalhe {
-  display: block;
-  margin-top: 4px;
-  font-size: 12.5px;
-  color: #8a8a8a;
-}
-
-.banner-dentro-regiao {
-  margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.banner-dentro-regiao.compra { background: rgba(38, 166, 154, 0.15); color: #26a69a; border: 1px solid #26a69a; }
-.banner-dentro-regiao.venda { background: rgba(239, 83, 80, 0.15); color: #ef5350; border: 1px solid #ef5350; }
-
-.painel-aguardando {
-  border-radius: 10px;
-  padding: 16px 20px;
-  border: 1px solid;
-}
-
-.painel-aguardando.compra { background: rgba(38, 166, 154, 0.08); border-color: #26a69a; }
-.painel-aguardando.venda { background: rgba(239, 83, 80, 0.08); border-color: #ef5350; }
-
-.aguardando-rotulo {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  opacity: 0.8;
-  margin-bottom: 6px;
-}
-
-.aguardando-conteudo {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.painel-padroes h2 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #8a8a8a;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin: 0 0 10px;
-}
-
-.lista-padroes {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.padrao-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #1c2129;
-  border: 1px solid #2a2e39;
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-}
-
-.padrao-horario {
-  color: #8a8a8a;
-  font-variant-numeric: tabular-nums;
-  min-width: 70px;
-}
-
-.padrao-regiao {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.padrao-vazio {
+.detalhe-leve {
   color: #666;
-  font-size: 13.5px;
-  padding: 10px 14px;
+  font-size: 12px;
 }

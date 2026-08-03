@@ -14,37 +14,82 @@
 </header>
 
 <main>
-  <section class="painel-preco">
-    <div class="preco-atual">
-      <span class="preco-rotulo">NQ agora</span>
-      <span class="preco-valor" id="preco-valor">—</span>
-      <span class="preco-horario" id="preco-horario"></span>
+  <section class="hero">
+    <div class="hero-preco">
+      <span class="hero-rotulo">NQ agora</span>
+      <span class="hero-valor" id="preco-valor">—</span>
+      <span class="hero-horario" id="preco-horario"></span>
     </div>
-
-    <div class="regioes-proximas">
-      <div class="card-regiao" id="card-regiao-acima">
-        <div class="card-rotulo">Região mais próxima ACIMA</div>
-        <div class="card-conteudo" id="conteudo-regiao-acima">sem dados</div>
-      </div>
-      <div class="card-regiao" id="card-regiao-abaixo">
-        <div class="card-rotulo">Região mais próxima ABAIXO</div>
-        <div class="card-conteudo" id="conteudo-regiao-abaixo">sem dados</div>
-      </div>
+    <div class="hero-vies" id="hero-vies">
+      <span class="hero-rotulo">Viés</span>
+      <span class="hero-vies-valor" id="vies-valor">—</span>
     </div>
-
-    <div class="banner-dentro-regiao" id="banner-dentro-regiao" hidden></div>
   </section>
 
-  <section class="painel-aguardando" id="painel-aguardando" hidden>
+  <div class="banner-dentro-regiao" id="banner-dentro-regiao" hidden></div>
+  <div class="painel-aguardando" id="painel-aguardando" hidden>
     <div class="aguardando-rotulo">Padrão identificado — aguardando 3ª tentativa</div>
     <div class="aguardando-conteudo" id="conteudo-aguardando"></div>
+  </div>
+
+  <section class="cartao">
+    <h2>Leitura direcional</h2>
+    <table class="tabela-leitura">
+      <thead>
+        <tr><th></th><th class="col-compra">Compra</th><th class="col-venda">Venda</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Abaixo do preço (suporte / resistência já rompida)</td>
+          <td id="leitura-compra-abaixo">—</td>
+          <td id="leitura-venda-abaixo">—</td>
+        </tr>
+        <tr>
+          <td>Acima do preço (resistência / suporte à frente)</td>
+          <td id="leitura-compra-acima">—</td>
+          <td id="leitura-venda-acima">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="leitura-conclusao" id="leitura-conclusao"></p>
   </section>
 
-  <section class="painel-padroes">
-    <h2>Padrões confirmados hoje</h2>
-    <div class="lista-padroes" id="lista-padroes">
-      <div class="padrao-vazio">nenhum padrão confirmado ainda</div>
+  <section class="grade-regioes">
+    <div class="cartao">
+      <h2 class="titulo-compra">Regiões compradoras</h2>
+      <table class="tabela-regioes">
+        <thead>
+          <tr><th>Faixa</th><th>Distância</th><th>Travas</th><th>Última trava</th></tr>
+        </thead>
+        <tbody id="corpo-tabela-compra">
+          <tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>
+        </tbody>
+      </table>
     </div>
+
+    <div class="cartao">
+      <h2 class="titulo-venda">Regiões vendedoras</h2>
+      <table class="tabela-regioes">
+        <thead>
+          <tr><th>Faixa</th><th>Distância</th><th>Travas</th><th>Última trava</th></tr>
+        </thead>
+        <tbody id="corpo-tabela-venda">
+          <tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cartao">
+    <h2>Padrões confirmados hoje</h2>
+    <table class="tabela-padroes">
+      <thead>
+        <tr><th>Horário</th><th>Operação</th><th>Região</th></tr>
+      </thead>
+      <tbody id="corpo-tabela-padroes">
+        <tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>
+      </tbody>
+    </table>
   </section>
 </main>
 
