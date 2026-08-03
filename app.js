@@ -1,30 +1,38 @@
 const supabaseCliente = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const INTERVALO_ATUALIZACAO_MS = 3000;
-const LIMITE_NEGOCIACOES = 2000;
-const LIMITE_RAJADAS = 500;
+const TAMANHO_PAGINA = 1000; // teto de linhas por request do PostgREST/Supabase
 
-const COR_ALTA = "#22cc22";
-const COR_BAIXA = "#dd2020";
+// Paleta/estilo igual ao padrão do TradingView (candle teal/coral, grid sutil, linha de
+// preço atual pontilhada com rótulo colorido à direita).
+const COR_ALTA = "#26a69a";
+const COR_BAIXA = "#ef5350";
 const COR_BOLHA_COMPRA = "#4dff4d";
 const COR_BOLHA_VENDA = "#ff4d4d";
 
 const elementoStatus = document.getElementById("status");
 
 const grafico = LightweightCharts.createChart(document.getElementById("grafico"), {
-  layout: { background: { color: "#0d0d0d" }, textColor: "#cfcfcf" },
-  grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-  rightPriceScale: { borderColor: "#262626" },
-  timeScale: { borderColor: "#262626", timeVisible: true, secondsVisible: false },
+  layout: { background: { color: "#131722" }, textColor: "#d1d4dc" },
+  grid: {
+    vertLines: { color: "#1e222d" },
+    horzLines: { color: "#1e222d" },
+  },
+  rightPriceScale: { borderColor: "#2a2e39" },
+  timeScale: { borderColor: "#2a2e39", timeVisible: true, secondsVisible: false },
   crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
 });
 
 const serieCandle = grafico.addCandlestickSeries({
   upColor: COR_ALTA,
   downColor: COR_BAIXA,
-  borderVisible: false,
+  borderUpColor: COR_ALTA,
+  borderDownColor: COR_BAIXA,
   wickUpColor: COR_ALTA,
   wickDownColor: COR_BAIXA,
+  priceLineVisible: true,
+  priceLineStyle: LightweightCharts.LineStyle.Dotted,
+  lastValueVisible: true,
 });
 
 new ResizeObserver((entradas) => {
@@ -91,6 +99,26 @@ function montarMarcadores(rajadas, baseMeiaNoiteSegundos) {
   return marcadores;
 }
 
+/** Busca TODAS as linhas de uma tabela em ordem crescente, paginando pelo teto de linhas
+ *  por request do PostgREST/Supabase (o .limit() sozinho não passa desse teto). */
+async function buscarTudoPaginado(nomeTabela, colunas, colunaOrdem) {
+  const linhas = [];
+  let pagina = 0;
+  while (true) {
+    const inicio = pagina * TAMANHO_PAGINA;
+    const { data, error } = await supabaseCliente
+      .from(nomeTabela)
+      .select(colunas)
+      .order(colunaOrdem, { ascending: true })
+      .range(inicio, inicio + TAMANHO_PAGINA - 1);
+    if (error) throw error;
+    linhas.push(...data);
+    if (data.length < TAMANHO_PAGINA) break;
+    pagina += 1;
+  }
+  return linhas;
+}
+
 async function buscarDados() {
   // O lightweight-charts formata os rótulos do eixo do tempo em UTC, sempre -- por isso a
   // âncora do "dia" também precisa ser meia-noite UTC (não meia-noite local). Se usasse local,
@@ -100,29 +128,20 @@ async function buscarDados() {
   const baseMeiaNoiteSegundos =
     Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate()) / 1000;
 
-  // desc + limit pega as linhas mais RECENTES (a tabela pode ter sobras antigas de sessões
-  // passadas) -- depois inverte pra ordem cronológica antes de montar candle/marcador.
-  const [respostaNegociacoes, respostaRajadas] = await Promise.all([
-    supabaseCliente
-      .from("negociacoes_tempo_real")
-      .select("horario,preco,quantidade,direcao")
-      .order("criado_em", { ascending: false })
-      .limit(LIMITE_NEGOCIACOES),
-    supabaseCliente
-      .from("rajadas_trava_nq")
-      .select("horario_rajada,preco_rajada,direcao_rajada,negocios,confirmada,horario_confirmacao,preco_confirmacao,operacao")
-      .order("criado_em", { ascending: false })
-      .limit(LIMITE_RAJADAS),
+  // Pega o pregão inteiro que estiver armazenado (não só uma janela recente) -- ordena por
+  // "horario" (hora real do negócio), não por "criado_em" (hora em que a linha foi gravada no
+  // banco), porque quando o publicador_dashboard.py reinicia ele relê o servidor.log inteiro
+  // e publica negociações antigas de uma vez só, com criado_em recente mas horario antigo.
+  const [negociacoes, rajadas] = await Promise.all([
+    buscarTudoPaginado("negociacoes_tempo_real", "horario,preco,quantidade,direcao", "horario"),
+    buscarTudoPaginado(
+      "rajadas_trava_nq",
+      "horario_rajada,preco_rajada,direcao_rajada,negocios,confirmada,horario_confirmacao,preco_confirmacao,operacao",
+      "horario_rajada",
+    ),
   ]);
 
-  if (respostaNegociacoes.error) throw respostaNegociacoes.error;
-  if (respostaRajadas.error) throw respostaRajadas.error;
-
-  return {
-    negociacoes: respostaNegociacoes.data.reverse(),
-    rajadas: respostaRajadas.data.reverse(),
-    baseMeiaNoiteSegundos,
-  };
+  return { negociacoes, rajadas, baseMeiaNoiteSegundos };
 }
 
 let primeiraCargaComDados = true;
