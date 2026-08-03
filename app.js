@@ -172,8 +172,8 @@ async function atualizar() {
     elementoViesValor.className = "hero-vies-valor " + leitura.vies;
 
     const textosConclusao = {
-      alta: `Viés de ALTA — suporte (${leitura.suporte} travas de compra abaixo) mais forte que a resistência (${leitura.resistencia} travas de venda acima).`,
-      baixa: `Viés de BAIXA — resistência (${leitura.resistencia} travas de venda acima) mais forte que o suporte (${leitura.suporte} travas de compra abaixo).`,
+      alta: `Estrutura de ALTA — suporte (${leitura.suporte} travas de compra abaixo) mais forte que a resistência (${leitura.resistencia} travas de venda acima).`,
+      baixa: `Estrutura de BAIXA — resistência (${leitura.resistencia} travas de venda acima) mais forte que o suporte (${leitura.suporte} travas de compra abaixo).`,
       neutro: `Neutro — suporte (${leitura.suporte}) e resistência (${leitura.resistencia}) equilibrados, ou nenhuma região relevante nos dois lados.`,
     };
     elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
