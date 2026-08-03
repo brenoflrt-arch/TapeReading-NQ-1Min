@@ -3,38 +3,51 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TapeReading NQ 1Min</title>
+<title>TapeReading NQ — Estrutura</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <header class="topo">
-  <h1>TapeReading NQ <span class="destaque">1 min</span></h1>
+  <h1>TapeReading NQ <span class="destaque">estrutura de mercado</span></h1>
   <div class="status" id="status">conectando…</div>
 </header>
 
 <main>
-  <div id="grafico-wrapper">
-    <div id="grafico"></div>
-    <div id="faixas-regioes"></div>
-    <div id="retangulos-padroes"></div>
-  </div>
+  <section class="painel-preco">
+    <div class="preco-atual">
+      <span class="preco-rotulo">NQ agora</span>
+      <span class="preco-valor" id="preco-valor">—</span>
+      <span class="preco-horario" id="preco-horario"></span>
+    </div>
 
-  <div class="legenda">
-    <span><i class="bolinha bolinha-compra"></i> rajada de compra</span>
-    <span><i class="bolinha bolinha-venda"></i> rajada de venda</span>
-    <span><i class="estrela estrela-compra">★</i> trava compradora</span>
-    <span><i class="estrela estrela-venda">★</i> trava vendedora</span>
-    <span><i class="linha-nivel linha-nivel-compra"></i> aguardando 3ª tentativa (compra)</span>
-    <span><i class="linha-nivel linha-nivel-venda"></i> aguardando 3ª tentativa (venda)</span>
-    <span><i class="retangulo retangulo-compra"></i> padrão confirmado (possível compra)</span>
-    <span><i class="retangulo retangulo-venda"></i> padrão confirmado (possível venda)</span>
-    <span><i class="faixa faixa-compra"></i> região compradora (ontem+hoje)</span>
-    <span><i class="faixa faixa-venda"></i> região vendedora (ontem+hoje)</span>
-  </div>
+    <div class="regioes-proximas">
+      <div class="card-regiao" id="card-regiao-acima">
+        <div class="card-rotulo">Região mais próxima ACIMA</div>
+        <div class="card-conteudo" id="conteudo-regiao-acima">sem dados</div>
+      </div>
+      <div class="card-regiao" id="card-regiao-abaixo">
+        <div class="card-rotulo">Região mais próxima ABAIXO</div>
+        <div class="card-conteudo" id="conteudo-regiao-abaixo">sem dados</div>
+      </div>
+    </div>
+
+    <div class="banner-dentro-regiao" id="banner-dentro-regiao" hidden></div>
+  </section>
+
+  <section class="painel-aguardando" id="painel-aguardando" hidden>
+    <div class="aguardando-rotulo">Padrão identificado — aguardando 3ª tentativa</div>
+    <div class="aguardando-conteudo" id="conteudo-aguardando"></div>
+  </section>
+
+  <section class="painel-padroes">
+    <h2>Padrões confirmados hoje</h2>
+    <div class="lista-padroes" id="lista-padroes">
+      <div class="padrao-vazio">nenhum padrão confirmado ainda</div>
+    </div>
+  </section>
 </main>
 
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>

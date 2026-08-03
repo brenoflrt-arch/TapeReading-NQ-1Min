@@ -2,25 +2,18 @@
 
 html, body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   background: #131722;
   color: #d1d4dc;
   font-family: "Segoe UI", Arial, sans-serif;
-  overflow: hidden;
-}
-
-body {
-  display: flex;
-  flex-direction: column;
 }
 
 .topo {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid #2a2e39;
-  flex: 0 0 auto;
 }
 
 .topo h1 {
@@ -51,114 +44,173 @@ body {
 }
 
 main {
-  flex: 1 1 auto;
+  padding: 20px;
+  max-width: 720px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  padding: 10px 20px 6px;
+  gap: 20px;
 }
 
-#grafico-wrapper {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
+.painel-preco {
+  background: #1c2129;
+  border: 1px solid #2a2e39;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.preco-atual {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.preco-rotulo {
+  font-size: 13px;
+  color: #8a8a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preco-valor {
+  font-size: 40px;
+  font-weight: 700;
+  color: #d1d4dc;
+  font-variant-numeric: tabular-nums;
+}
+
+.preco-horario {
+  font-size: 12.5px;
+  color: #666;
+}
+
+.regioes-proximas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card-regiao {
+  background: #131722;
+  border: 1px solid #2a2e39;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.card-rotulo {
+  font-size: 12px;
+  color: #8a8a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.card-conteudo {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.card-conteudo.vazio {
+  color: #666;
+}
+
+.tag-operacao {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.tag-operacao.compra { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
+.tag-operacao.venda { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
+
+.regiao-faixa {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.regiao-detalhe {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: #8a8a8a;
+}
+
+.banner-dentro-regiao {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.banner-dentro-regiao.compra { background: rgba(38, 166, 154, 0.15); color: #26a69a; border: 1px solid #26a69a; }
+.banner-dentro-regiao.venda { background: rgba(239, 83, 80, 0.15); color: #ef5350; border: 1px solid #ef5350; }
+
+.painel-aguardando {
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid;
+}
+
+.painel-aguardando.compra { background: rgba(38, 166, 154, 0.08); border-color: #26a69a; }
+.painel-aguardando.venda { background: rgba(239, 83, 80, 0.08); border-color: #ef5350; }
+
+.aguardando-rotulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.aguardando-conteudo {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.painel-padroes h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a8a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 10px;
+}
+
+.lista-padroes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.padrao-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1c2129;
   border: 1px solid #2a2e39;
   border-radius: 6px;
-  overflow: hidden;
+  padding: 10px 14px;
+  font-size: 13.5px;
 }
 
-#grafico {
-  width: 100%;
-  height: 100%;
+.padrao-horario {
+  color: #8a8a8a;
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
 }
 
-#retangulos-padroes,
-#faixas-regioes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
+.padrao-regiao {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
-.retangulo-padrao {
-  position: absolute;
-  border-width: 1px;
-  border-style: solid;
-  box-sizing: border-box;
+.padrao-vazio {
+  color: #666;
+  font-size: 13.5px;
+  padding: 10px 14px;
 }
-
-.faixa-regiao {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-top: 1px dashed;
-  border-bottom: 1px dashed;
-  box-sizing: border-box;
-}
-
-.legenda {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 24px;
-  margin-top: 8px;
-  font-size: 12.5px;
-  color: #b0b0b0;
-}
-
-.bolinha {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.bolinha-compra { background: #4dff4d; }
-.bolinha-venda { background: #ff4d4d; }
-
-.estrela {
-  margin-right: 4px;
-}
-
-.estrela-compra { color: #4dff4d; }
-.estrela-venda { color: #ff4d4d; }
-
-.linha-nivel {
-  display: inline-block;
-  width: 14px;
-  height: 0;
-  margin-right: 6px;
-  vertical-align: middle;
-  border-top: 2px dashed;
-}
-
-.linha-nivel-compra { border-color: #26a69a; }
-.linha-nivel-venda { border-color: #ef5350; }
-
-.retangulo {
-  display: inline-block;
-  width: 14px;
-  height: 10px;
-  margin-right: 6px;
-  vertical-align: middle;
-  border: 1px solid;
-  box-sizing: border-box;
-}
-
-.retangulo-compra { background: rgba(38, 166, 154, 0.18); border-color: #26a69a; }
-.retangulo-venda { background: rgba(239, 83, 80, 0.18); border-color: #ef5350; }
-
-.faixa {
-  display: inline-block;
-  width: 14px;
-  height: 10px;
-  margin-right: 6px;
-  vertical-align: middle;
-  border: 1px dashed;
-  box-sizing: border-box;
-}
-
-.faixa-compra { background: rgba(38, 166, 154, 0.08); border-color: #26a69a; }
-.faixa-venda { background: rgba(239, 83, 80, 0.08); border-color: #ef5350; }
