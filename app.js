@@ -122,6 +122,8 @@ async function buscarDados() {
   };
 }
 
+let primeiraCargaComDados = true;
+
 async function atualizar() {
   try {
     const { negociacoes, rajadas, baseMeiaNoiteSegundos } = await buscarDados();
@@ -134,6 +136,13 @@ async function atualizar() {
 
     serieCandle.setData(montarCandles(negociacoes, baseMeiaNoiteSegundos));
     serieCandle.setMarkers(montarMarcadores(rajadas, baseMeiaNoiteSegundos));
+
+    // Só centraliza/ajusta o zoom na primeira carga com dados -- depois disso deixa o
+    // usuário controlar (senão toda atualização de 3 em 3s cancelaria o zoom/scroll manual).
+    if (primeiraCargaComDados) {
+      grafico.timeScale().fitContent();
+      primeiraCargaComDados = false;
+    }
 
     elementoStatus.textContent = `ao vivo — ${negociacoes.length} negociações, ${rajadas.length} rajadas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
