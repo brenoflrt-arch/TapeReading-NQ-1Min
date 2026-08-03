@@ -22,19 +22,34 @@ const elementoBotaoSom = document.getElementById("botao-som");
 
 // ---- Áudio (os mesmos .mp3 de voz gravados pelo usuário, usados pelo servidor.py) tocado
 // toda vez que aparece um padrão novo (linha nova em padroes_1_2_tentativa) -- compra e venda
-// tocam arquivos diferentes. Navegadores bloqueiam áudio automático sem um clique antes, por
-// isso o botão "Ativar som" faz o primeiro play() dentro do gesto do usuário. ----
-let somAtivado = false;
+// tocam arquivos diferentes. Ligado por padrão (o botão agora serve pra MUTAR, não pra
+// ativar) -- mas navegadores só liberam áudio de verdade depois de alguma interação do
+// usuário com a página, então destrava no primeiro clique em QUALQUER lugar, não só no
+// botão (o botão continua funcionando como mute/unmute manual). ----
+let somAtivado = true;
 const audioCompra = new Audio("sons/compradores_travando.mp3");
 const audioVenda = new Audio("sons/vendedores_travando.mp3");
 const audioPadraoIdentificado = new Audio("sons/segunda_trava_validada.mp3");
 
+elementoBotaoSom.textContent = "🔔 Som ativado";
+elementoBotaoSom.classList.add("ativo");
+
+let audioDestravado = false;
+function destravarAudio() {
+  if (audioDestravado) return;
+  audioDestravado = true;
+  for (const audio of [audioCompra, audioVenda, audioPadraoIdentificado]) {
+    audio.play().then(() => audio.pause()).catch(() => {});
+  }
+}
+document.addEventListener("click", destravarAudio, { once: true });
+
 elementoBotaoSom.addEventListener("click", () => {
   somAtivado = !somAtivado;
-  elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔔 Ativar som";
+  elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔕 Som mutado";
   elementoBotaoSom.classList.toggle("ativo", somAtivado);
   if (somAtivado) {
-    tocarBlip("compra"); // feedback imediato de que o som funciona (e desbloqueia o autoplay)
+    tocarBlip("compra"); // feedback imediato de que o som funciona
   }
 });
 
@@ -251,8 +266,13 @@ async function atualizar() {
       // primeira carga da página: só registra, não toca o histórico.
       idNivelAguardandoVisto = idNivelAtual;
     } else if (idNivelAtual && idNivelAtual !== idNivelAguardandoVisto) {
-      tocarAudioPadraoIdentificado();
-      idNivelAguardandoVisto = idNivelAtual;
+      // Só marca como "visto" quando o som REALMENTE tocar -- se o padrão ficou ativo com o
+      // som desligado, fica pendente (continua tentando a cada ciclo) até o usuário ativar o
+      // som, em vez de considerar "já avisado" silenciosamente.
+      if (somAtivado) {
+        tocarAudioPadraoIdentificado();
+        idNivelAguardandoVisto = idNivelAtual;
+      }
     } else if (!idNivelAtual) {
       idNivelAguardandoVisto = null;
     }
@@ -272,9 +292,10 @@ async function atualizar() {
       idsPadroesVistos = new Set(padroes.map((p) => p.id));
     } else {
       // padroes vem ordenado por horario_segunda desc, então o primeiro não visto é o mais
-      // recente -- usa a operação dele pra escolher qual áudio tocar.
+      // recente -- usa a operação dele pra escolher qual áudio tocar. Só marca como "visto"
+      // quando o som REALMENTE tocar -- fica pendente se o som ainda estiver desligado.
       const padraoNovo = padroes.find((p) => !idsPadroesVistos.has(p.id));
-      if (padraoNovo) {
+      if (padraoNovo && somAtivado) {
         tocarBlip(padraoNovo.operacao);
         idsPadroesVistos = new Set(padroes.map((p) => p.id));
       }
