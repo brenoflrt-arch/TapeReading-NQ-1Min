@@ -27,6 +27,7 @@ const elementoBotaoSom = document.getElementById("botao-som");
 let somAtivado = false;
 const audioCompra = new Audio("sons/compradores_travando.mp3");
 const audioVenda = new Audio("sons/vendedores_travando.mp3");
+const audioPadraoIdentificado = new Audio("sons/segunda_trava_validada.mp3");
 
 elementoBotaoSom.addEventListener("click", () => {
   somAtivado = !somAtivado;
@@ -44,9 +45,20 @@ function tocarBlip(operacao) {
   audio.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
 }
 
+function tocarAudioPadraoIdentificado() {
+  if (!somAtivado) return;
+  audioPadraoIdentificado.currentTime = 0;
+  audioPadraoIdentificado.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
+}
+
 // ids de padrões já vistos -- na primeira carga só registra (não bipa o histórico do dia
 // inteiro), da segunda em diante bipa quando aparece um id novo.
 let idsPadroesVistos = null;
+
+// id_oferta do nível "aguardando 3ª tentativa" ativo visto por último -- na primeira carga só
+// registra, depois toca o áudio quando um nível NOVO fica ativo (não repete a cada 3s
+// enquanto o mesmo nível continua ativo).
+let idNivelAguardandoVisto = undefined; // undefined = ainda não checou; null = nenhum ativo
 
 /** Preço mais recente negociado -- não usa cotacao_atual (o servidor.py só grava lá fora do
  *  modo SOMENTE_ANALISE) -- negociacoes_tempo_real é publicado por publicador_dashboard.py
@@ -72,7 +84,7 @@ async function buscarRegioesMercado() {
 async function buscarNivelAguardando() {
   const { data, error } = await supabaseCliente
     .from("niveis_aguardando_3_tentativa")
-    .select("nivel_preco,operacao")
+    .select("id_oferta,nivel_preco,operacao")
     .eq("ativo", true)
     .limit(1);
   if (error) throw error;
@@ -227,6 +239,17 @@ async function atualizar() {
         `nível ${formatarPreco(nivelAguardando.nivel_preco)}`;
     } else {
       elementoPainelAguardando.hidden = true;
+    }
+
+    const idNivelAtual = nivelAguardando ? nivelAguardando.id_oferta : null;
+    if (idNivelAguardandoVisto === undefined) {
+      // primeira carga da página: só registra, não toca o histórico.
+      idNivelAguardandoVisto = idNivelAtual;
+    } else if (idNivelAtual && idNivelAtual !== idNivelAguardandoVisto) {
+      tocarAudioPadraoIdentificado();
+      idNivelAguardandoVisto = idNivelAtual;
+    } else if (!idNivelAtual) {
+      idNivelAguardandoVisto = null;
     }
 
     elementoCorpoTabelaPadroes.innerHTML = padroes.length
