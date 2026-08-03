@@ -82,10 +82,15 @@ async function buscarRegioesMercado() {
 }
 
 async function buscarNivelAguardando() {
+  // Por design só devia existir 1 linha ativo=true por vez (ver publicar_niveis_aguardando em
+  // publicador_dashboard.py), mas ordena por atualizado_em desc por segurança -- se alguma
+  // vez sobrar mais de uma ativa (ex.: corrida entre desativar a antiga e ativar a nova),
+  // pega sempre a mais recente, não uma qualquer.
   const { data, error } = await supabaseCliente
     .from("niveis_aguardando_3_tentativa")
     .select("id_oferta,nivel_preco,operacao")
     .eq("ativo", true)
+    .order("atualizado_em", { ascending: false })
     .limit(1);
   if (error) throw error;
   return data[0] || null;
