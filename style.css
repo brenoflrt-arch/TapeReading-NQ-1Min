@@ -73,7 +73,8 @@ main {
   height: 100%;
 }
 
-#retangulos-padroes {
+#retangulos-padroes,
+#faixas-regioes {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -84,6 +85,15 @@ main {
   position: absolute;
   border-width: 1px;
   border-style: solid;
+  box-sizing: border-box;
+}
+
+.faixa-regiao {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed;
+  border-bottom: 1px dashed;
   box-sizing: border-box;
 }
 
@@ -139,3 +149,16 @@ main {
 
 .retangulo-compra { background: rgba(38, 166, 154, 0.18); border-color: #26a69a; }
 .retangulo-venda { background: rgba(239, 83, 80, 0.18); border-color: #ef5350; }
+
+.faixa {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px dashed;
+  box-sizing: border-box;
+}
+
+.faixa-compra { background: rgba(38, 166, 154, 0.08); border-color: #26a69a; }
+.faixa-venda { background: rgba(239, 83, 80, 0.08); border-color: #ef5350; }

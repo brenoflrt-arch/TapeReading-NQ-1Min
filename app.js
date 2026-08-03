@@ -16,6 +16,7 @@ const FAIXA_RETANGULO_PONTOS = 5;
 
 const elementoStatus = document.getElementById("status");
 const elementoRetangulos = document.getElementById("retangulos-padroes");
+const elementoFaixas = document.getElementById("faixas-regioes");
 
 const grafico = LightweightCharts.createChart(document.getElementById("grafico"), {
   layout: { background: { color: "#131722" }, textColor: "#d1d4dc" },
@@ -44,6 +45,7 @@ new ResizeObserver((entradas) => {
   const { width, height } = entradas[0].contentRect;
   grafico.resize(width, height);
   desenharRetangulosPadroes();
+  desenharFaixasRegioes();
 }).observe(document.getElementById("grafico"));
 
 /** "HH:MM:SS.mmm" -> segundos desde meia-noite (UTCTimestamp ancorado no dia de hoje). */
@@ -234,7 +236,39 @@ function desenharRetangulosPadroes() {
   }
 }
 
+/** Busca o mapa de regiões compradoras/vendedoras (ontem+hoje, 2+ travas confirmadas na
+ *  mesma região) publicado pelo publicador_dashboard.py. Tabela pequena (dezenas de linhas),
+ *  não precisa de paginação nem filtro de horário -- o próprio publicador já só publica
+ *  regiões dentro da janela de 2 dias. */
+async function buscarRegioesMercado() {
+  const { data, error } = await supabaseCliente
+    .from("regioes_mercado")
+    .select("id,operacao,minima,maxima,quantidade_travas");
+  if (error) throw error;
+  return data;
+}
+
+let ultimasRegioesMercado = [];
+
+function desenharFaixasRegioes() {
+  elementoFaixas.innerHTML = "";
+
+  for (const r of ultimasRegioesMercado) {
+    const yTopo = serieCandle.priceToCoordinate(r.maxima);
+    const yBase = serieCandle.priceToCoordinate(r.minima);
+    if (yTopo === null || yBase === null) continue;
+
+    const div = document.createElement("div");
+    div.className = "faixa-regiao " + (r.operacao === "compra" ? "faixa-compra" : "faixa-venda");
+    div.style.top = `${Math.min(yTopo, yBase)}px`;
+    div.style.height = `${Math.max(Math.abs(yBase - yTopo), 2)}px`;
+    div.title = `Região ${r.operacao} [${r.minima} - ${r.maxima}] — ${r.quantidade_travas} travas`;
+    elementoFaixas.appendChild(div);
+  }
+}
+
 grafico.timeScale().subscribeVisibleLogicalRangeChange(desenharRetangulosPadroes);
+grafico.timeScale().subscribeVisibleLogicalRangeChange(desenharFaixasRegioes);
 
 let primeiraCargaComDados = true;
 
@@ -260,6 +294,9 @@ async function atualizar() {
     ultimosPadroesConfirmados = padroesConfirmados;
     ultimaBaseMeiaNoiteSegundos = baseMeiaNoiteSegundos;
 
+    const regioesMercado = await buscarRegioesMercado();
+    ultimasRegioesMercado = regioesMercado;
+
     // Só centraliza/ajusta o zoom na primeira carga com dados -- depois disso deixa o
     // usuário controlar (senão toda atualização de 3 em 3s cancelaria o zoom/scroll manual).
     if (primeiraCargaComDados) {
@@ -268,8 +305,9 @@ async function atualizar() {
     }
 
     desenharRetangulosPadroes();
+    desenharFaixasRegioes();
 
-    elementoStatus.textContent = `ao vivo — ${negociacoes.length} negociações, ${rajadas.length} rajadas, ${niveisAguardando.length} aguardando 3ª, ${padroesConfirmados.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
+    elementoStatus.textContent = `ao vivo — ${negociacoes.length} negociações, ${rajadas.length} rajadas, ${niveisAguardando.length} aguardando 3ª, ${padroesConfirmados.length} padrões, ${regioesMercado.length} regiões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
   } catch (erro) {
     console.error(erro);
