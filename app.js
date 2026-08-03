@@ -97,23 +97,29 @@ async function buscarDados() {
     new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime() / 1000
   );
 
+  // desc + limit pega as linhas mais RECENTES (a tabela pode ter sobras antigas de sessões
+  // passadas) -- depois inverte pra ordem cronológica antes de montar candle/marcador.
   const [respostaNegociacoes, respostaRajadas] = await Promise.all([
     supabaseCliente
       .from("negociacoes_tempo_real")
       .select("horario,preco,quantidade,direcao")
-      .order("criado_em", { ascending: true })
+      .order("criado_em", { ascending: false })
       .limit(LIMITE_NEGOCIACOES),
     supabaseCliente
       .from("rajadas_trava_nq")
       .select("horario_rajada,preco_rajada,direcao_rajada,negocios,confirmada,horario_confirmacao,preco_confirmacao,operacao")
-      .order("criado_em", { ascending: true })
+      .order("criado_em", { ascending: false })
       .limit(LIMITE_RAJADAS),
   ]);
 
   if (respostaNegociacoes.error) throw respostaNegociacoes.error;
   if (respostaRajadas.error) throw respostaRajadas.error;
 
-  return { negociacoes: respostaNegociacoes.data, rajadas: respostaRajadas.data, baseMeiaNoiteSegundos };
+  return {
+    negociacoes: respostaNegociacoes.data.reverse(),
+    rajadas: respostaRajadas.data.reverse(),
+    baseMeiaNoiteSegundos,
+  };
 }
 
 async function atualizar() {
