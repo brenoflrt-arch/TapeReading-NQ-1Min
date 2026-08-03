@@ -58,13 +58,33 @@ main {
   padding: 10px 20px 6px;
 }
 
-#grafico {
+#grafico-wrapper {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   border: 1px solid #2a2e39;
   border-radius: 6px;
   overflow: hidden;
+}
+
+#grafico {
+  width: 100%;
+  height: 100%;
+}
+
+#retangulos-padroes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.retangulo-padrao {
+  position: absolute;
+  border-width: 1px;
+  border-style: solid;
+  box-sizing: border-box;
 }
 
 .legenda {
@@ -94,3 +114,28 @@ main {
 
 .estrela-compra { color: #4dff4d; }
 .estrela-venda { color: #ff4d4d; }
+
+.linha-nivel {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 2px dashed;
+}
+
+.linha-nivel-compra { border-color: #26a69a; }
+.linha-nivel-venda { border-color: #ef5350; }
+
+.retangulo {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid;
+  box-sizing: border-box;
+}
+
+.retangulo-compra { background: rgba(38, 166, 154, 0.18); border-color: #26a69a; }
+.retangulo-venda { background: rgba(239, 83, 80, 0.18); border-color: #ef5350; }

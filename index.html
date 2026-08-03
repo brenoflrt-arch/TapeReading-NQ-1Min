@@ -14,13 +14,20 @@
 </header>
 
 <main>
-  <div id="grafico"></div>
+  <div id="grafico-wrapper">
+    <div id="grafico"></div>
+    <div id="retangulos-padroes"></div>
+  </div>
 
   <div class="legenda">
     <span><i class="bolinha bolinha-compra"></i> rajada de compra</span>
     <span><i class="bolinha bolinha-venda"></i> rajada de venda</span>
     <span><i class="estrela estrela-compra">★</i> trava compradora</span>
     <span><i class="estrela estrela-venda">★</i> trava vendedora</span>
+    <span><i class="linha-nivel linha-nivel-compra"></i> aguardando 3ª tentativa (compra)</span>
+    <span><i class="linha-nivel linha-nivel-venda"></i> aguardando 3ª tentativa (venda)</span>
+    <span><i class="retangulo retangulo-compra"></i> padrão confirmado (possível compra)</span>
+    <span><i class="retangulo retangulo-venda"></i> padrão confirmado (possível venda)</span>
   </div>
 </main>
 

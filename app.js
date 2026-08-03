@@ -10,7 +10,12 @@ const COR_BAIXA = "#ef5350";
 const COR_BOLHA_COMPRA = "#4dff4d";
 const COR_BOLHA_VENDA = "#ff4d4d";
 
+// Mesma janela de preço que o servidor.py usa (LIMITE_JANELA_PRECO) pra considerar "mesma
+// região" entre a 1ª e a 2ª tentativa -- o retângulo cobre região ± essa faixa.
+const FAIXA_RETANGULO_PONTOS = 5;
+
 const elementoStatus = document.getElementById("status");
+const elementoRetangulos = document.getElementById("retangulos-padroes");
 
 const grafico = LightweightCharts.createChart(document.getElementById("grafico"), {
   layout: { background: { color: "#131722" }, textColor: "#d1d4dc" },
@@ -38,6 +43,7 @@ const serieCandle = grafico.addCandlestickSeries({
 new ResizeObserver((entradas) => {
   const { width, height } = entradas[0].contentRect;
   grafico.resize(width, height);
+  desenharRetangulosPadroes();
 }).observe(document.getElementById("grafico"));
 
 /** "HH:MM:SS.mmm" -> segundos desde meia-noite (UTCTimestamp ancorado no dia de hoje). */
@@ -144,6 +150,92 @@ async function buscarDados() {
   return { negociacoes, rajadas, baseMeiaNoiteSegundos };
 }
 
+/** Busca os níveis "aguardando 3ª tentativa" ainda ativos (2ª tentativa confirmada, esperando
+ *  o preço aproximar/confirmar ou invalidar) publicados pelo publicador_dashboard.py. */
+async function buscarNiveisAguardando() {
+  const { data, error } = await supabaseCliente
+    .from("niveis_aguardando_3_tentativa")
+    .select("id_oferta,nivel_preco,operacao")
+    .eq("ativo", true);
+  if (error) throw error;
+  return data;
+}
+
+// id_oferta -> handle da linha de preço (LightweightCharts.IPriceLine) desenhada no candle.
+const linhasDeNivelAtivas = new Map();
+
+function atualizarLinhasDeNivel(niveisAtivos) {
+  const idsAtivos = new Set(niveisAtivos.map((n) => n.id_oferta));
+
+  for (const [id, linha] of linhasDeNivelAtivas) {
+    if (!idsAtivos.has(id)) {
+      serieCandle.removePriceLine(linha);
+      linhasDeNivelAtivas.delete(id);
+    }
+  }
+
+  for (const n of niveisAtivos) {
+    if (linhasDeNivelAtivas.has(n.id_oferta)) continue;
+    const cor = n.operacao === "compra" ? COR_ALTA : COR_BAIXA;
+    const linha = serieCandle.createPriceLine({
+      price: n.nivel_preco,
+      color: cor,
+      lineWidth: 2,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: n.operacao === "compra" ? "aguardando 3ª — compra" : "aguardando 3ª — venda",
+    });
+    linhasDeNivelAtivas.set(n.id_oferta, linha);
+  }
+}
+
+/** Busca TODOS os padrões confirmados (histórico -- 1ª+2ª tentativa na mesma região),
+ *  publicados pelo publicador_dashboard.py, pra desenhar um retângulo sobre os candles
+ *  exatos de cada um. */
+async function buscarPadroesConfirmados() {
+  return buscarTudoPaginado(
+    "padroes_1_2_tentativa",
+    "id,horario_primeira,horario_segunda,regiao_preco,operacao",
+    "horario_segunda",
+  );
+}
+
+// Guarda o último lote buscado + a âncora de meia-noite, pra poder reposicionar os
+// retângulos (pan/zoom/resize) sem precisar rebuscar do Supabase.
+let ultimosPadroesConfirmados = [];
+let ultimaBaseMeiaNoiteSegundos = 0;
+
+function desenharRetangulosPadroes() {
+  elementoRetangulos.innerHTML = "";
+  const larguraContainer = elementoRetangulos.clientWidth;
+
+  for (const p of ultimosPadroesConfirmados) {
+    const inicioMinuto = minutoBase(p.horario_primeira) + ":00.000";
+    const tempoInicio = horarioParaTimestamp(inicioMinuto, ultimaBaseMeiaNoiteSegundos);
+    // Fim = início do minuto SEGUINTE ao da 2ª tentativa, pra cobrir o candle inteiro dela
+    // (mesmo bucket de minuto usado em montarCandles), não só o instante em que ela ocorreu.
+    const tempoFim = horarioParaTimestamp(minutoBase(p.horario_segunda) + ":00.000", ultimaBaseMeiaNoiteSegundos) + 60;
+
+    const x1 = grafico.timeScale().timeToCoordinate(tempoInicio);
+    const x2 = grafico.timeScale().timeToCoordinate(tempoFim);
+    const yTopo = serieCandle.priceToCoordinate(p.regiao_preco + FAIXA_RETANGULO_PONTOS);
+    const yBase = serieCandle.priceToCoordinate(p.regiao_preco - FAIXA_RETANGULO_PONTOS);
+
+    if (x1 === null || x2 === null || yTopo === null || yBase === null) continue;
+    if (x2 < 0 || x1 > larguraContainer) continue; // fora da área visível, não desenha
+
+    const div = document.createElement("div");
+    div.className = "retangulo-padrao " + (p.operacao === "compra" ? "retangulo-compra" : "retangulo-venda");
+    div.style.left = `${x1}px`;
+    div.style.top = `${Math.min(yTopo, yBase)}px`;
+    div.style.width = `${Math.max(x2 - x1, 2)}px`;
+    div.style.height = `${Math.max(Math.abs(yBase - yTopo), 2)}px`;
+    elementoRetangulos.appendChild(div);
+  }
+}
+
+grafico.timeScale().subscribeVisibleLogicalRangeChange(desenharRetangulosPadroes);
+
 let primeiraCargaComDados = true;
 
 async function atualizar() {
@@ -161,6 +253,13 @@ async function atualizar() {
     // o candle puro primeiro. Reativar chamando montarMarcadores(rajadas, baseMeiaNoiteSegundos).
     serieCandle.setMarkers([]);
 
+    const niveisAguardando = await buscarNiveisAguardando();
+    atualizarLinhasDeNivel(niveisAguardando);
+
+    const padroesConfirmados = await buscarPadroesConfirmados();
+    ultimosPadroesConfirmados = padroesConfirmados;
+    ultimaBaseMeiaNoiteSegundos = baseMeiaNoiteSegundos;
+
     // Só centraliza/ajusta o zoom na primeira carga com dados -- depois disso deixa o
     // usuário controlar (senão toda atualização de 3 em 3s cancelaria o zoom/scroll manual).
     if (primeiraCargaComDados) {
@@ -168,7 +267,9 @@ async function atualizar() {
       primeiraCargaComDados = false;
     }
 
-    elementoStatus.textContent = `ao vivo — ${negociacoes.length} negociações, ${rajadas.length} rajadas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
+    desenharRetangulosPadroes();
+
+    elementoStatus.textContent = `ao vivo — ${negociacoes.length} negociações, ${rajadas.length} rajadas, ${niveisAguardando.length} aguardando 3ª, ${padroesConfirmados.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
   } catch (erro) {
     console.error(erro);
