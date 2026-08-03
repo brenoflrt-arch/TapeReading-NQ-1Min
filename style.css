@@ -75,6 +75,8 @@ main {
 .bolinha-venda { background: #ff4d4d; }
 
 .estrela {
-  color: #ffd700;
   margin-right: 4px;
 }
+
+.estrela-compra { color: #4dff4d; }
+.estrela-venda { color: #ff4d4d; }

@@ -8,7 +8,6 @@ const COR_ALTA = "#22cc22";
 const COR_BAIXA = "#dd2020";
 const COR_BOLHA_COMPRA = "#4dff4d";
 const COR_BOLHA_VENDA = "#ff4d4d";
-const COR_TRAVA = "#ffd700";
 
 const elementoStatus = document.getElementById("status");
 
@@ -75,10 +74,13 @@ function montarMarcadores(rajadas, baseMeiaNoiteSegundos) {
       text: String(r.negocios),
     });
     if (r.confirmada && r.horario_confirmacao) {
+      // Trava compradora (verde) ou vendedora (vermelha) -- cor = operação implícita,
+      // igual ao gráfico local (grafico_ao_vivo.py).
+      const corTrava = r.operacao === "compra" ? COR_ALTA : COR_BAIXA;
       marcadores.push({
         time: horarioParaTimestamp(r.horario_confirmacao, baseMeiaNoiteSegundos),
         position: r.operacao === "compra" ? "belowBar" : "aboveBar",
-        color: COR_TRAVA,
+        color: corTrava,
         shape: "circle",
         size: 1.6,
         text: "★ " + (r.operacao || ""),
