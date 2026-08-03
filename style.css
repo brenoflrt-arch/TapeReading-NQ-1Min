@@ -29,6 +29,31 @@ html, body {
   font-weight: 400;
 }
 
+.topo-direita {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.botao-som {
+  background: #1c2129;
+  border: 1px solid #2a2e39;
+  color: #d1d4dc;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.botao-som:hover {
+  background: #22262f;
+}
+
+.botao-som.ativo {
+  border-color: #26a69a;
+  color: #26a69a;
+}
+
 .status {
   font-size: 12.5px;
   color: #888;

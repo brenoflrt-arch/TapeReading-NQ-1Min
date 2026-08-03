@@ -18,6 +18,46 @@ const elementoLeituraConclusao = document.getElementById("leitura-conclusao");
 const elementoCorpoTabelaCompra = document.getElementById("corpo-tabela-compra");
 const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
+const elementoBotaoSom = document.getElementById("botao-som");
+
+// ---- Blip sonoro (Web Audio API, sem arquivo de áudio) toda vez que aparece um padrão novo
+// (linha nova em padroes_1_2_tentativa) -- navegadores bloqueiam áudio automático sem um
+// clique antes, por isso o botão "Ativar som" cria/retoma o AudioContext na hora do clique. ----
+let audioContexto = null;
+let somAtivado = false;
+
+elementoBotaoSom.addEventListener("click", () => {
+  if (!audioContexto) {
+    audioContexto = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContexto.state === "suspended") {
+    audioContexto.resume();
+  }
+  somAtivado = !somAtivado;
+  elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔔 Ativar som";
+  elementoBotaoSom.classList.toggle("ativo", somAtivado);
+  if (somAtivado) {
+    tocarBlip(); // feedback imediato de que o som funciona
+  }
+});
+
+function tocarBlip() {
+  if (!somAtivado || !audioContexto) return;
+  const oscilador = audioContexto.createOscillator();
+  const ganho = audioContexto.createGain();
+  oscilador.type = "sine";
+  oscilador.frequency.value = 880;
+  ganho.gain.setValueAtTime(0.2, audioContexto.currentTime);
+  ganho.gain.exponentialRampToValueAtTime(0.001, audioContexto.currentTime + 0.25);
+  oscilador.connect(ganho);
+  ganho.connect(audioContexto.destination);
+  oscilador.start();
+  oscilador.stop(audioContexto.currentTime + 0.25);
+}
+
+// ids de padrões já vistos -- na primeira carga só registra (não bipa o histórico do dia
+// inteiro), da segunda em diante bipa quando aparece um id novo.
+let idsPadroesVistos = null;
 
 /** Preço mais recente negociado -- não usa cotacao_atual (o servidor.py só grava lá fora do
  *  modo SOMENTE_ANALISE) -- negociacoes_tempo_real é publicado por publicador_dashboard.py
@@ -209,6 +249,17 @@ async function atualizar() {
         </tr>
       `).join("")
       : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
+
+    if (idsPadroesVistos === null) {
+      // primeira carga da página: só registra o que já existe, não bipa o histórico do dia.
+      idsPadroesVistos = new Set(padroes.map((p) => p.id));
+    } else {
+      const temPadraoNovo = padroes.some((p) => !idsPadroesVistos.has(p.id));
+      if (temPadraoNovo) {
+        tocarBlip();
+        idsPadroesVistos = new Set(padroes.map((p) => p.id));
+      }
+    }
 
     elementoStatus.textContent = `ao vivo — ${regioes.length} regiões, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
