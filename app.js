@@ -20,39 +20,28 @@ const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
 const elementoBotaoSom = document.getElementById("botao-som");
 
-// ---- Blip sonoro (Web Audio API, sem arquivo de áudio) toda vez que aparece um padrão novo
-// (linha nova em padroes_1_2_tentativa) -- navegadores bloqueiam áudio automático sem um
-// clique antes, por isso o botão "Ativar som" cria/retoma o AudioContext na hora do clique. ----
-let audioContexto = null;
+// ---- Áudio (os mesmos .mp3 de voz gravados pelo usuário, usados pelo servidor.py) tocado
+// toda vez que aparece um padrão novo (linha nova em padroes_1_2_tentativa) -- compra e venda
+// tocam arquivos diferentes. Navegadores bloqueiam áudio automático sem um clique antes, por
+// isso o botão "Ativar som" faz o primeiro play() dentro do gesto do usuário. ----
 let somAtivado = false;
+const audioCompra = new Audio("sons/compradores_travando.mp3");
+const audioVenda = new Audio("sons/vendedores_travando.mp3");
 
 elementoBotaoSom.addEventListener("click", () => {
-  if (!audioContexto) {
-    audioContexto = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioContexto.state === "suspended") {
-    audioContexto.resume();
-  }
   somAtivado = !somAtivado;
   elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔔 Ativar som";
   elementoBotaoSom.classList.toggle("ativo", somAtivado);
   if (somAtivado) {
-    tocarBlip(); // feedback imediato de que o som funciona
+    tocarBlip("compra"); // feedback imediato de que o som funciona (e desbloqueia o autoplay)
   }
 });
 
-function tocarBlip() {
-  if (!somAtivado || !audioContexto) return;
-  const oscilador = audioContexto.createOscillator();
-  const ganho = audioContexto.createGain();
-  oscilador.type = "sine";
-  oscilador.frequency.value = 880;
-  ganho.gain.setValueAtTime(0.2, audioContexto.currentTime);
-  ganho.gain.exponentialRampToValueAtTime(0.001, audioContexto.currentTime + 0.25);
-  oscilador.connect(ganho);
-  ganho.connect(audioContexto.destination);
-  oscilador.start();
-  oscilador.stop(audioContexto.currentTime + 0.25);
+function tocarBlip(operacao) {
+  if (!somAtivado) return;
+  const audio = operacao === "compra" ? audioCompra : audioVenda;
+  audio.currentTime = 0;
+  audio.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
 }
 
 // ids de padrões já vistos -- na primeira carga só registra (não bipa o histórico do dia
@@ -254,9 +243,11 @@ async function atualizar() {
       // primeira carga da página: só registra o que já existe, não bipa o histórico do dia.
       idsPadroesVistos = new Set(padroes.map((p) => p.id));
     } else {
-      const temPadraoNovo = padroes.some((p) => !idsPadroesVistos.has(p.id));
-      if (temPadraoNovo) {
-        tocarBlip();
+      // padroes vem ordenado por horario_segunda desc, então o primeiro não visto é o mais
+      // recente -- usa a operação dele pra escolher qual áudio tocar.
+      const padraoNovo = padroes.find((p) => !idsPadroesVistos.has(p.id));
+      if (padraoNovo) {
+        tocarBlip(padraoNovo.operacao);
         idsPadroesVistos = new Set(padroes.map((p) => p.id));
       }
     }
