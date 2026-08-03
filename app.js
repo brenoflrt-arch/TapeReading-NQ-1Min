@@ -92,10 +92,13 @@ function montarMarcadores(rajadas, baseMeiaNoiteSegundos) {
 }
 
 async function buscarDados() {
+  // O lightweight-charts formata os rótulos do eixo do tempo em UTC, sempre -- por isso a
+  // âncora do "dia" também precisa ser meia-noite UTC (não meia-noite local). Se usasse local,
+  // o rótulo mostrado ficaria deslocado pelo fuso do navegador (ex.: +3h no horário de
+  // Brasília), mesmo o timestamp em si estando "certo" em termos absolutos.
   const agora = new Date();
-  const baseMeiaNoiteSegundos = Math.floor(
-    new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).getTime() / 1000
-  );
+  const baseMeiaNoiteSegundos =
+    Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate()) / 1000;
 
   // desc + limit pega as linhas mais RECENTES (a tabela pode ter sobras antigas de sessões
   // passadas) -- depois inverte pra ordem cronológica antes de montar candle/marcador.
