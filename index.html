@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TapeReading NQ 1Min</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topo">
+  <h1>TapeReading NQ <span class="destaque">1 min</span></h1>
+  <div class="status" id="status">conectando…</div>
+</header>
+
+<main>
+  <div id="grafico"></div>
+
+  <div class="legenda">
+    <span><i class="bolinha bolinha-compra"></i> rajada de compra</span>
+    <span><i class="bolinha bolinha-venda"></i> rajada de venda</span>
+    <span><i class="estrela">★</i> trava confirmada (reverteu 10–30 pts)</span>
+  </div>
+</main>
+
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
