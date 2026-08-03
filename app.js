@@ -135,7 +135,9 @@ async function atualizar() {
     }
 
     serieCandle.setData(montarCandles(negociacoes, baseMeiaNoiteSegundos));
-    serieCandle.setMarkers(montarMarcadores(rajadas, baseMeiaNoiteSegundos));
+    // Bolhas/estrelas desligadas por enquanto (poluíam demais com muitas rajadas) -- alinhando
+    // o candle puro primeiro. Reativar chamando montarMarcadores(rajadas, baseMeiaNoiteSegundos).
+    serieCandle.setMarkers([]);
 
     // Só centraliza/ajusta o zoom na primeira carga com dados -- depois disso deixa o
     // usuário controlar (senão toda atualização de 3 em 3s cancelaria o zoom/scroll manual).
