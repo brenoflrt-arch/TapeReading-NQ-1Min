@@ -185,6 +185,13 @@ main {
 .cartao h2.titulo-compra { color: #26a69a; }
 .cartao h2.titulo-venda { color: #ef5350; }
 
+.subtitulo-leve {
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: #555;
+}
+
 /* ---- tabelas ---- */
 
 table {

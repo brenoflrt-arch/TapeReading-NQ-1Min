@@ -2,6 +2,11 @@ const supabaseCliente = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE
 
 const INTERVALO_ATUALIZACAO_MS = 3000;
 const LIMITE_PADROES_EXIBIDOS = 20; // mostra só os mais recentes, mais antigo que isso não cabe na tela
+const LIMITE_ISOLADAS_EXIBIDAS = 20;
+// Mesma régua do publicador_dashboard.py (MINIMO_TRAVAS_POR_REGIAO): região só conta pras
+// tabelas principais/leitura direcional com 2+ travas -- o backend agora publica TUDO
+// (inclusive 1 trava só), e é aqui no site que a gente separa confirmada de isolada.
+const MINIMO_TRAVAS_CONFIRMADA = 2;
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -18,6 +23,7 @@ const elementoLeituraConclusao = document.getElementById("leitura-conclusao");
 const elementoCorpoTabelaCompra = document.getElementById("corpo-tabela-compra");
 const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
+const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
 const elementoBotaoSom = document.getElementById("botao-som");
 
 // ---- Áudio (os mesmos .mp3 de voz gravados pelo usuário, usados pelo servidor.py) tocado
@@ -211,7 +217,10 @@ async function atualizar() {
     elementoPrecoValor.textContent = formatarPreco(precoAtual.preco);
     elementoPrecoHorario.textContent = precoAtual.horario.slice(0, 8);
 
-    const regioesClassificadas = classificarRegioes(regioes, precoAtual.preco);
+    const regioesConfirmadas = regioes.filter((r) => r.quantidade_travas >= MINIMO_TRAVAS_CONFIRMADA);
+    const regioesIsoladas = regioes.filter((r) => r.quantidade_travas < MINIMO_TRAVAS_CONFIRMADA);
+
+    const regioesClassificadas = classificarRegioes(regioesConfirmadas, precoAtual.preco);
     const regiaoDentro = regioesClassificadas.find((r) => r.posicao === "dentro");
 
     if (regiaoDentro) {
@@ -250,6 +259,20 @@ async function atualizar() {
     elementoCorpoTabelaVenda.innerHTML = regioesVenda.length
       ? regioesVenda.map(linhaTabelaRegiao).join("")
       : '<tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>';
+
+    const isoladasRecentes = [...regioesIsoladas]
+      .sort((a, b) => (b.ultima_trava_em || "").localeCompare(a.ultima_trava_em || ""))
+      .slice(0, LIMITE_ISOLADAS_EXIBIDAS);
+
+    elementoCorpoTabelaIsoladas.innerHTML = isoladasRecentes.length
+      ? isoladasRecentes.map((r) => `
+        <tr>
+          <td>${r.ultima_trava_em ? r.ultima_trava_em.slice(0, 8) : "—"}</td>
+          <td><span class="tag-operacao ${r.operacao}">${r.operacao}</span></td>
+          <td>${formatarPreco(r.minima)}</td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="3" class="linha-vazia">nenhuma trava isolada</td></tr>';
 
     if (nivelAguardando) {
       elementoPainelAguardando.hidden = false;
@@ -301,7 +324,7 @@ async function atualizar() {
       }
     }
 
-    elementoStatus.textContent = `ao vivo — ${regioes.length} regiões, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
+    elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
   } catch (erro) {
     console.error(erro);
