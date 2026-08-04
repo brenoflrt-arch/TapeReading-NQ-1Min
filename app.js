@@ -78,15 +78,23 @@ async function buscarPrecoAtual() {
 
 async function buscarOperacoesSimuladas() {
   // Vem do analisador_tentativas_pequenas.py (times filtrado <= 3 contratos, rodando local,
-  // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
-  // Sem limit aqui de propósito: o relatório de performance precisa de TODAS as operações do
-  // dia, não só as mais recentes -- a tabela na tela é que corta pra LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
+  // separado do servidor.py). Sem limit aqui de propósito: o relatório de performance precisa
+  // de TODAS as operações do dia, não só as mais recentes -- a tabela na tela é que corta pra
+  // LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
+  //
+  // NÃO ordena por criado_em aqui (bug encontrado em 2026-08-04): criado_em é quando a linha foi
+  // GRAVADA no Supabase, e um reinício do analisador replaya o log inteiro em silêncio -- uma
+  // operação de horário de mercado mais cedo (ex.: 16:53) pode ser gravada bem DEPOIS (ex.: só
+  // no restart das 18:18) de uma operação de horário mais tarde (17:45) que já tinha sido gravada
+  // antes. horario_entrada é o horário real do mercado, então é isso que ordena certo -- feito no
+  // JS (não dá pra `.order()` no Supabase por um campo texto com semântica de horário-do-dia sem
+  // reordenar errado entre dias, mas como não há filtro de data aqui mesmo, isso já valia antes).
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
     .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_pontos,horario_entrada,horario_resultado,criado_em")
-    .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
-    .order("criado_em", { ascending: false });
+    .not("status", "in", "(cancelada,descartada)"); // ruído de referências que nunca confirmaram -- não interessa aqui
   if (error) throw error;
+  data.sort((a, b) => b.horario_entrada.localeCompare(a.horario_entrada));
   return data;
 }
 
@@ -324,7 +332,7 @@ async function atualizar() {
 
     const resolvidas = [...operacoesSimuladas]
       .filter((o) => o.status === "gain" || o.status === "stop")
-      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+      .sort((a, b) => a.horario_entrada.localeCompare(b.horario_entrada));
     const est = calcularEstatisticas(resolvidas);
     preencherRelatorio(est);
     desenharGraficoAcumulado(est.curva);
