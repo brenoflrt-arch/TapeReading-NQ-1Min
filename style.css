@@ -3,7 +3,7 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: #0d1017;
+  background: #000000;
   color: #d1d4dc;
   font-family: "Segoe UI", Arial, sans-serif;
 }
@@ -15,8 +15,8 @@ html, body {
   justify-content: space-between;
   gap: 10px;
   padding: 16px 28px;
-  border-bottom: 1px solid #22262f;
-  background: #131722;
+  border-bottom: 1px solid #262626;
+  background: #000000;
 }
 
 .topo h1 {
@@ -67,8 +67,8 @@ main {
 
 .hero-preco,
 .hero-vies {
-  background: #131722;
-  border: 1px solid #22262f;
+  background: #0a0a0a;
+  border: 1px solid #262626;
   border-radius: 10px;
   padding: 18px 22px;
   display: flex;
@@ -107,8 +107,8 @@ main {
 /* ---- cartões genéricos ---- */
 
 .cartao {
-  background: #131722;
-  border: 1px solid #22262f;
+  background: #0a0a0a;
+  border: 1px solid #262626;
   border-radius: 10px;
   padding: 18px 20px;
 }
@@ -154,7 +154,7 @@ main {
   letter-spacing: 0.4px;
   margin: 0 0 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #22262f;
+  border-bottom: 1px solid #262626;
 }
 
 .relatorio-coluna h3.titulo-compra { color: #15803d; }
@@ -206,7 +206,7 @@ table {
 .tabela-rolavel thead th {
   position: sticky;
   top: 0;
-  background: #131722;
+  background: #0a0a0a;
   z-index: 1;
 }
 
@@ -218,7 +218,7 @@ thead th {
   color: #666;
   font-weight: 600;
   padding: 0 10px 8px;
-  border-bottom: 1px solid #22262f;
+  border-bottom: 1px solid #262626;
 }
 
 .tabela-leitura thead th.col-compra { color: #15803d; }
@@ -226,7 +226,7 @@ thead th {
 
 tbody td {
   padding: 10px;
-  border-bottom: 1px solid #1a1e27;
+  border-bottom: 1px solid #1a1a1a;
   font-variant-numeric: tabular-nums;
 }
 
@@ -235,7 +235,7 @@ tbody tr:last-child td {
 }
 
 tbody tr:hover td {
-  background: #171b25;
+  background: #181818;
 }
 
 .linha-vazia {
@@ -249,7 +249,7 @@ tbody tr:hover td {
   font-size: 14px;
   font-weight: 600;
   padding-top: 12px;
-  border-top: 1px solid #22262f;
+  border-top: 1px solid #262626;
 }
 
 .leitura-conclusao.alta { color: #15803d; }

@@ -146,7 +146,7 @@ function calcularLeituraDirecional(regioesClassificadas) {
 
 function celulaLeitura(quantidadeRegioes, travas) {
   if (quantidadeRegioes === 0) return "—";
-  return `${travas} trava${travas === 1 ? "" : "s"} <span class="detalhe-leve">(${quantidadeRegioes} região${quantidadeRegioes === 1 ? "" : "ões"})</span>`;
+  return `${travas} trava${travas === 1 ? "" : "s"} <span class="detalhe-leve">(${quantidadeRegioes} ${quantidadeRegioes === 1 ? "região" : "regiões"})</span>`;
 }
 
 // ---- Relatório de performance (estilo "Trade Performance" do NinjaTrader) ----
@@ -319,7 +319,7 @@ function desenharGraficoAcumulado(curva) {
   }).join("");
 
   elementoGraficoAcumulado.innerHTML = `
-    <line x1="0" y1="${yZero.toFixed(1)}" x2="${largura}" y2="${yZero.toFixed(1)}" stroke="#2a2e39" stroke-width="1" stroke-dasharray="4,4" />
+    <line x1="0" y1="${yZero.toFixed(1)}" x2="${largura}" y2="${yZero.toFixed(1)}" stroke="#333333" stroke-width="1" stroke-dasharray="4,4" />
     ${barras}
   `;
 }
