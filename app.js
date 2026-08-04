@@ -11,6 +11,9 @@ const MINIMO_TRAVAS_CONFIRMADA = 2;
 // NÃO manda o alerta "PADRÃO IDENTIFICADO" (mas o site continua mostrando, só marcado como
 // "fraco", já que lê o log de forma independente e sem esse filtro).
 const FORCA_MINIMA_NOTIFICACAO = 1;
+// Confirmado pelo usuário (2026-08-04): 2 MNQ por operação = $80 no alvo/stop de 20 pontos
+// (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- $4 por ponto.
+const DOLAR_POR_PONTO_2_MNQ = 4;
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -30,6 +33,15 @@ const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes
 const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
 const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 20;
+const elementoResumoOperacoes = document.getElementById("resumo-operacoes");
+const elementoResumoAcerto = document.getElementById("resumo-acerto");
+const elementoResumoFinanceiro = document.getElementById("resumo-financeiro");
+const elementoGraficoPerformance = document.getElementById("grafico-performance");
+const elementoGraficoGainContagem = document.getElementById("grafico-gain-contagem");
+const elementoGraficoStopContagem = document.getElementById("grafico-stop-contagem");
+const elementoGraficoBarraGain = document.getElementById("grafico-barra-gain");
+const elementoGraficoBarraStop = document.getElementById("grafico-barra-stop");
+const elementoGraficoCurva = document.getElementById("grafico-curva");
 
 // ---- Abas: só troca qual painel fica visível -- os dados continuam sendo buscados e
 // atualizados nos dois em segundo plano, então trocar de aba mostra tudo já atualizado. ----
@@ -134,12 +146,13 @@ async function buscarPadroesRecentes() {
 async function buscarOperacoesSimuladas() {
   // Vem do analisador_tentativas_pequenas.py (times filtrado <= 3 contratos, rodando local,
   // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
+  // Sem limit aqui de propósito: a performance (resumo/gráfico) precisa de TODAS as operações do
+  // dia, não só as mais recentes -- a tabela na tela é que corta pra LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
     .select("id,operacao,preco_entrada,tentativas,negocios_acumulados,minutos_formacao,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
-    .order("criado_em", { ascending: false })
-    .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    .order("criado_em", { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -214,6 +227,73 @@ function celulaResultado(op) {
   if (op.status === "cancelada") return '<span class="tag-resultado cancelada">cancelada</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
   return `<span class="tag-resultado ${classe}">${op.resultado} (${op.resultado_pontos > 0 ? "+" : ""}${op.resultado_pontos} pts)</span>`;
+}
+
+function formatarDolar(valor) {
+  const sinal = valor > 0 ? "+" : "";
+  return `${sinal}$${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Resumo (operações resolvidas, taxa de acerto, resultado em $ com 2 MNQ) + gráfico (barra
+ *  gain/stop + curva de patrimônio acumulado) -- usa TODAS as operações do dia (não só as
+ *  exibidas na tabela), em ordem cronológica (a query já vem desc, então inverte aqui). */
+function atualizarPerformance(operacoesSimuladas) {
+  const resolvidas = [...operacoesSimuladas]
+    .filter((o) => o.status === "gain" || o.status === "stop")
+    .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+
+  if (resolvidas.length === 0) {
+    elementoResumoOperacoes.textContent = "—";
+    elementoResumoAcerto.textContent = "—";
+    elementoResumoFinanceiro.textContent = "—";
+    elementoGraficoPerformance.hidden = true;
+    return;
+  }
+
+  const gains = resolvidas.filter((o) => o.status === "gain");
+  const stops = resolvidas.filter((o) => o.status === "stop");
+  const taxaAcerto = (gains.length / resolvidas.length) * 100;
+
+  let acumulado = 0;
+  const pontosCurva = resolvidas.map((o) => {
+    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_2_MNQ;
+    return acumulado;
+  });
+  const resultadoTotal = acumulado;
+
+  elementoResumoOperacoes.textContent = resolvidas.length;
+  elementoResumoAcerto.textContent = `${taxaAcerto.toFixed(1)}%`;
+  elementoResumoFinanceiro.textContent = formatarDolar(resultadoTotal);
+  elementoResumoFinanceiro.className = "resumo-valor " + (resultadoTotal >= 0 ? "positivo" : "negativo");
+
+  elementoGraficoPerformance.hidden = false;
+  elementoGraficoGainContagem.textContent = gains.length;
+  elementoGraficoStopContagem.textContent = stops.length;
+  const maiorLado = Math.max(gains.length, stops.length, 1);
+  elementoGraficoBarraGain.style.width = `${(gains.length / maiorLado) * 100}%`;
+  elementoGraficoBarraStop.style.width = `${(stops.length / maiorLado) * 100}%`;
+
+  desenharCurvaPatrimonio(pontosCurva);
+}
+
+function desenharCurvaPatrimonio(pontosCurva) {
+  const largura = 600;
+  const altura = 140;
+  const minimo = Math.min(0, ...pontosCurva);
+  const maximo = Math.max(0, ...pontosCurva);
+  const amplitude = maximo - minimo || 1;
+
+  const paraX = (i) => (pontosCurva.length <= 1 ? 0 : (i / (pontosCurva.length - 1)) * largura);
+  const paraY = (valor) => altura - ((valor - minimo) / amplitude) * altura;
+
+  const pontos = pontosCurva.map((v, i) => `${paraX(i).toFixed(1)},${paraY(v).toFixed(1)}`).join(" ");
+  const corLinha = pontosCurva[pontosCurva.length - 1] >= 0 ? "#26a69a" : "#ef5350";
+  const yZero = paraY(0).toFixed(1);
+
+  elementoGraficoCurva.innerHTML = `
+    <line x1="0" y1="${yZero}" x2="${largura}" y2="${yZero}" stroke="#2a2e39" stroke-width="1" stroke-dasharray="4,4" />
+    <polyline points="${pontos}" fill="none" stroke="${corLinha}" stroke-width="2" />
+  `;
 }
 
 function linhaTabelaRegiao(r) {
@@ -346,8 +426,11 @@ async function atualizar() {
       `).join("")
       : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
 
-    elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesSimuladas.length
-      ? operacoesSimuladas.map((o) => `
+    atualizarPerformance(operacoesSimuladas);
+
+    const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
+      ? operacoesExibidas.map((o) => `
         <tr>
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
@@ -356,10 +439,11 @@ async function atualizar() {
           <td>${o.negocios_acumulados ?? "—"}</td>
           <td>${o.minutos_formacao != null ? `${o.minutos_formacao.toFixed(1)}min` : "—"}</td>
           <td>${celulaResultado(o)}</td>
+          <td>${o.resultado_pontos != null ? formatarDolar(o.resultado_pontos * DOLAR_POR_PONTO_2_MNQ) : "—"}</td>
           <td class="detalhe-leve">${o.observacao || "—"}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="8" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
+      : '<tr><td colspan="9" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
     elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";

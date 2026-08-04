@@ -59,12 +59,37 @@
 
     <section class="cartao">
       <h2>Operações simuladas <span class="subtitulo-leve">(times pequenas, ≤ 3 contratos — região por referência única)</span></h2>
+      <div class="resumo-performance" id="resumo-performance">
+        <div class="resumo-item">
+          <span class="resumo-rotulo">Operações</span>
+          <span class="resumo-valor" id="resumo-operacoes">—</span>
+        </div>
+        <div class="resumo-item">
+          <span class="resumo-rotulo">Taxa de acerto</span>
+          <span class="resumo-valor" id="resumo-acerto">—</span>
+        </div>
+        <div class="resumo-item">
+          <span class="resumo-rotulo">Resultado (2 MNQ)</span>
+          <span class="resumo-valor" id="resumo-financeiro">—</span>
+        </div>
+      </div>
+      <div class="grafico-performance" id="grafico-performance" hidden>
+        <div class="grafico-barra">
+          <div class="grafico-barra-rotulo">Gain <span id="grafico-gain-contagem">0</span></div>
+          <div class="grafico-barra-trilho"><div class="grafico-barra-preenchimento gain" id="grafico-barra-gain"></div></div>
+        </div>
+        <div class="grafico-barra">
+          <div class="grafico-barra-rotulo">Stop <span id="grafico-stop-contagem">0</span></div>
+          <div class="grafico-barra-trilho"><div class="grafico-barra-preenchimento stop" id="grafico-barra-stop"></div></div>
+        </div>
+        <svg id="grafico-curva" class="grafico-curva" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+      </div>
       <table class="tabela-padroes">
         <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Referência</th><th>Tentativas</th><th>Negócios</th><th>Formação</th><th>Resultado</th><th>Observação</th></tr>
+          <tr><th>Horário</th><th>Operação</th><th>Referência</th><th>Tentativas</th><th>Negócios</th><th>Formação</th><th>Resultado</th><th>$ (2 MNQ)</th><th>Observação</th></tr>
         </thead>
         <tbody id="corpo-tabela-operacoes-simuladas">
-          <tr><td colspan="8" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
+          <tr><td colspan="9" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
         </tbody>
       </table>
     </section>
