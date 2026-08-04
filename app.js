@@ -20,6 +20,34 @@ const elementoLeituraVendaAcima = document.getElementById("leitura-venda-acima")
 const elementoLeituraConclusao = document.getElementById("leitura-conclusao");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
+const elementoBotaoSom = document.getElementById("botao-som");
+
+// ---- Áudio: toca quando uma operação NOVA é validada (mesmo momento do áudio "compradores/
+// vendedores travando" do analisador_tentativas_pequenas.py, que é a estrategia real em
+// producao) -- navegador exige um clique antes de liberar autoplay, daí o botão "Ativar som".
+let somHabilitado = false;
+let primeiraCarga = true;
+const idsOperacoesVistas = new Set();
+const audioCompradores = new Audio("sons/compradores_travando.mp3");
+const audioVendedores = new Audio("sons/vendedores_travando.mp3");
+
+elementoBotaoSom.addEventListener("click", () => {
+  somHabilitado = !somHabilitado;
+  elementoBotaoSom.textContent = somHabilitado ? "🔊 Som ativado" : "🔈 Ativar som";
+  elementoBotaoSom.classList.toggle("ativo", somHabilitado);
+  if (somHabilitado) {
+    // desbloqueia os dois áudios no gesto do clique (autoplay policy)
+    audioCompradores.play().then(() => audioCompradores.pause());
+    audioVendedores.play().then(() => audioVendedores.pause());
+  }
+});
+
+function tocarAudioOperacaoValidada(operacao) {
+  if (!somHabilitado) return;
+  const audio = operacao === "compra" ? audioCompradores : audioVendedores;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
 
 const elementosRelatorio = {
   plBruto: document.getElementById("rel-pl-bruto"),
@@ -360,6 +388,18 @@ async function atualizar() {
     };
     elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
     elementoLeituraConclusao.className = "leitura-conclusao " + leitura.vies;
+
+    if (primeiraCarga) {
+      operacoesSimuladas.forEach((o) => idsOperacoesVistas.add(o.id));
+      primeiraCarga = false;
+    } else {
+      for (const o of operacoesSimuladas) {
+        if (!idsOperacoesVistas.has(o.id)) {
+          idsOperacoesVistas.add(o.id);
+          tocarAudioOperacaoValidada(o.operacao);
+        }
+      }
+    }
 
     const resolvidas = [...operacoesSimuladas]
       .filter((o) => o.status === "gain" || o.status === "stop")
