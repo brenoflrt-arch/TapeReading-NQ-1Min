@@ -322,6 +322,19 @@ table {
   font-size: 13.5px;
 }
 
+.tabela-rolavel {
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.tabela-rolavel thead th {
+  position: sticky;
+  top: 0;
+  background: #131722;
+  z-index: 1;
+}
+
 thead th {
   text-align: left;
   font-size: 11.5px;
