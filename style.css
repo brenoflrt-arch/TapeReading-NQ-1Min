@@ -108,6 +108,10 @@ html, body {
   gap: 18px;
 }
 
+.aba-painel[hidden] {
+  display: none;
+}
+
 main {
   padding: 24px 28px 40px;
   max-width: 880px;
