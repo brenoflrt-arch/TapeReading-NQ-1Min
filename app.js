@@ -11,9 +11,9 @@ const MINIMO_TRAVAS_CONFIRMADA = 2;
 // NÃO manda o alerta "PADRÃO IDENTIFICADO" (mas o site continua mostrando, só marcado como
 // "fraco", já que lê o log de forma independente e sem esse filtro).
 const FORCA_MINIMA_NOTIFICACAO = 1;
-// Confirmado pelo usuário (2026-08-04): 2 MNQ por operação = $80 no alvo/stop de 20 pontos
-// (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- $4 por ponto.
-const DOLAR_POR_PONTO_2_MNQ = 4;
+// Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
+// pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
+const DOLAR_POR_PONTO_OPERACAO = 20;
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -238,15 +238,16 @@ function celulaResultado(op) {
   if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
   if (op.status === "cancelada") return '<span class="tag-resultado cancelada">cancelada</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
-  return `<span class="tag-resultado ${classe}">${op.resultado} (${op.resultado_pontos > 0 ? "+" : ""}${op.resultado_pontos} pts)</span>`;
+  const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
+  return `<span class="tag-resultado ${classe}">${op.resultado} (${formatarDolar(valorDolar)})</span>`;
 }
 
 function formatarDolar(valor) {
-  const sinal = valor > 0 ? "+" : "";
-  return `${sinal}$${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const sinal = valor > 0 ? "+" : valor < 0 ? "-" : "";
+  return `${sinal}U$ ${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/** Resumo (operações resolvidas, taxa de acerto, resultado em $ com 2 MNQ) + gráfico (barra
+/** Resumo (operações resolvidas, taxa de acerto, resultado em $ com 1 NQ) + gráfico (barra
  *  gain/stop + curva de patrimônio acumulado) -- usa TODAS as operações do dia (não só as
  *  exibidas na tabela), em ordem cronológica (a query já vem desc, então inverte aqui). */
 function atualizarPerformance(operacoesSimuladas) {
@@ -268,7 +269,7 @@ function atualizarPerformance(operacoesSimuladas) {
 
   let acumulado = 0;
   const pontosCurva = resolvidas.map((o) => {
-    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_2_MNQ;
+    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
     return acumulado;
   });
   const resultadoTotal = acumulado;
@@ -299,7 +300,7 @@ function desenharCurvaPatrimonio(pontosCurva) {
   const paraY = (valor) => altura - ((valor - minimo) / amplitude) * altura;
 
   const pontos = pontosCurva.map((v, i) => `${paraX(i).toFixed(1)},${paraY(v).toFixed(1)}`).join(" ");
-  const corLinha = pontosCurva[pontosCurva.length - 1] >= 0 ? "#26a69a" : "#ef5350";
+  const corLinha = pontosCurva[pontosCurva.length - 1] >= 0 ? "#15803d" : "#ef5350";
   const yZero = paraY(0).toFixed(1);
 
   elementoGraficoCurva.innerHTML = `
@@ -464,7 +465,7 @@ async function atualizar() {
           <td>${o.negocios_acumulados ?? "—"}</td>
           <td>${o.minutos_formacao != null ? `${o.minutos_formacao.toFixed(1)}min` : "—"}</td>
           <td>${celulaResultado(o)}</td>
-          <td>${o.resultado_pontos != null ? formatarDolar(o.resultado_pontos * DOLAR_POR_PONTO_2_MNQ) : "—"}</td>
+          <td>${o.resultado_pontos != null ? formatarDolar(o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO) : "—"}</td>
           <td class="detalhe-leve">${o.observacao || "—"}</td>
         </tr>
       `).join("")

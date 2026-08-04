@@ -55,8 +55,8 @@ html, body {
 }
 
 .botao-som.ativo {
-  border-color: #26a69a;
-  color: #26a69a;
+  border-color: #15803d;
+  color: #15803d;
 }
 
 .status {
@@ -66,7 +66,7 @@ html, body {
 
 .status.ok::before {
   content: "● ";
-  color: #26a69a;
+  color: #15803d;
 }
 
 .status.erro::before {
@@ -99,7 +99,7 @@ html, body {
 
 .aba-botao.ativa {
   color: #d1d4dc;
-  border-bottom-color: #26a69a;
+  border-bottom-color: #15803d;
 }
 
 .aba-painel {
@@ -164,7 +164,7 @@ main {
   font-weight: 700;
 }
 
-.hero-vies-valor.alta { color: #26a69a; }
+.hero-vies-valor.alta { color: #15803d; }
 .hero-vies-valor.baixa { color: #ef5350; }
 .hero-vies-valor.neutro { color: #d19a3d; }
 
@@ -177,7 +177,7 @@ main {
   font-weight: 600;
 }
 
-.banner-dentro-regiao.compra { background: rgba(38, 166, 154, 0.12); color: #26a69a; border: 1px solid #26a69a; }
+.banner-dentro-regiao.compra { background: rgba(21, 128, 61,0.12); color: #15803d; border: 1px solid #15803d; }
 .banner-dentro-regiao.venda { background: rgba(239, 83, 80, 0.12); color: #ef5350; border: 1px solid #ef5350; }
 
 .painel-aguardando {
@@ -186,7 +186,7 @@ main {
   border: 1px solid;
 }
 
-.painel-aguardando.compra { background: rgba(38, 166, 154, 0.06); border-color: #26a69a; }
+.painel-aguardando.compra { background: rgba(21, 128, 61,0.06); border-color: #15803d; }
 .painel-aguardando.venda { background: rgba(239, 83, 80, 0.06); border-color: #ef5350; }
 
 .aguardando-rotulo {
@@ -232,7 +232,7 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
-.resumo-valor.positivo { color: #26a69a; }
+.resumo-valor.positivo { color: #15803d; }
 .resumo-valor.negativo { color: #ef5350; }
 
 /* ---- gráfico de performance ---- */
@@ -276,7 +276,7 @@ main {
   transition: width 0.3s ease;
 }
 
-.grafico-barra-preenchimento.gain { background: #26a69a; }
+.grafico-barra-preenchimento.gain { background: #15803d; }
 .grafico-barra-preenchimento.stop { background: #ef5350; }
 
 .grafico-curva {
@@ -304,7 +304,7 @@ main {
   margin: 0 0 14px;
 }
 
-.cartao h2.titulo-compra { color: #26a69a; }
+.cartao h2.titulo-compra { color: #15803d; }
 .cartao h2.titulo-venda { color: #ef5350; }
 
 .subtitulo-leve {
@@ -346,7 +346,7 @@ thead th {
   border-bottom: 1px solid #22262f;
 }
 
-.tabela-leitura thead th.col-compra { color: #26a69a; }
+.tabela-leitura thead th.col-compra { color: #15803d; }
 .tabela-leitura thead th.col-venda { color: #ef5350; }
 
 tbody td {
@@ -377,7 +377,7 @@ tbody tr:hover td {
   border-top: 1px solid #22262f;
 }
 
-.leitura-conclusao.alta { color: #26a69a; }
+.leitura-conclusao.alta { color: #15803d; }
 .leitura-conclusao.baixa { color: #ef5350; }
 .leitura-conclusao.neutro { color: #d19a3d; }
 
@@ -404,7 +404,7 @@ tbody tr:hover td {
   font-weight: 600;
 }
 
-.tag-operacao.compra { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
+.tag-operacao.compra { background: rgba(21, 128, 61,0.18); color: #15803d; }
 .tag-operacao.venda { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
 
 .tag-fraco {
@@ -435,5 +435,5 @@ tbody tr:hover td {
 
 .tag-resultado.aberta { background: rgba(209, 154, 61, 0.18); color: #d19a3d; }
 .tag-resultado.cancelada { background: rgba(120, 120, 120, 0.18); color: #888; }
-.tag-resultado.lucro { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
+.tag-resultado.lucro { background: rgba(21, 128, 61,0.18); color: #15803d; }
 .tag-resultado.prejuizo { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
