@@ -249,8 +249,11 @@ async function atualizar() {
     elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
     elementoLeituraConclusao.className = "leitura-conclusao " + leitura.vies;
 
-    const regioesCompra = regioesClassificadas.filter((r) => r.operacao === "compra");
-    const regioesVenda = regioesClassificadas.filter((r) => r.operacao === "venda");
+    // Ordena pela última trava (mais recente primeiro) -- a "distância" continua calculada e
+    // mostrada na coluna, só não é mais o critério de ordem das linhas.
+    const porUltimaTravaDesc = (a, b) => (b.ultima_trava_em || "").localeCompare(a.ultima_trava_em || "");
+    const regioesCompra = regioesClassificadas.filter((r) => r.operacao === "compra").sort(porUltimaTravaDesc);
+    const regioesVenda = regioesClassificadas.filter((r) => r.operacao === "venda").sort(porUltimaTravaDesc);
 
     elementoCorpoTabelaCompra.innerHTML = regioesCompra.length
       ? regioesCompra.map(linhaTabelaRegiao).join("")
