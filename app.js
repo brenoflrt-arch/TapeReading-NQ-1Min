@@ -28,6 +28,17 @@ const elementoCorpoTabelaCompra = document.getElementById("corpo-tabela-compra")
 const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
 const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
+
+// ---- Abas: só troca qual painel fica visível -- os dados continuam sendo buscados e
+// atualizados nos dois em segundo plano, então trocar de aba mostra tudo já atualizado. ----
+for (const botao of document.querySelectorAll(".aba-botao")) {
+  botao.addEventListener("click", () => {
+    for (const b of document.querySelectorAll(".aba-botao")) b.classList.remove("ativa");
+    botao.classList.add("ativa");
+    for (const painel of document.querySelectorAll(".aba-painel")) painel.hidden = true;
+    document.getElementById("aba-" + botao.dataset.aba).hidden = false;
+  });
+}
 const elementoBotaoSom = document.getElementById("botao-som");
 
 // ---- Áudio (os mesmos .mp3 de voz gravados pelo usuário, usados pelo servidor.py) tocado
