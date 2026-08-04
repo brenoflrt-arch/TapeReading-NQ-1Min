@@ -136,8 +136,8 @@ async function buscarOperacoesSimuladas() {
   // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
-    .select("id,operacao,preco_entrada,forca,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
-    .neq("status", "cancelada") // trava superada por uma melhor do mesmo lado -- não interessa aqui
+    .select("id,operacao,preco_entrada,tentativas,negocios_acumulados,minutos_formacao,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
+    .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false })
     .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
   if (error) throw error;
@@ -352,12 +352,14 @@ async function atualizar() {
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
           <td>${formatarPreco(o.preco_entrada)}</td>
-          <td>${o.forca.toFixed(1)}</td>
+          <td>${o.tentativas}</td>
+          <td>${o.negocios_acumulados ?? "—"}</td>
+          <td>${o.minutos_formacao != null ? `${o.minutos_formacao.toFixed(1)}min` : "—"}</td>
           <td>${celulaResultado(o)}</td>
           <td class="detalhe-leve">${o.observacao || "—"}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="6" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
+      : '<tr><td colspan="8" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
     elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
