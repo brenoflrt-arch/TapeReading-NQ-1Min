@@ -100,7 +100,7 @@ async function buscarOperacoesSimuladas() {
   // dia, não só as mais recentes -- a tabela na tela é que corta pra LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
-    .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_pontos,horario_entrada,horario_resultado,criado_em")
+    .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_pontos,horario_entrada,horario_resultado,criado_em")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false });
   if (error) throw error;
@@ -116,11 +116,24 @@ function formatarDolar(valor) {
   return `${sinal}U$ ${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function celulaResultado(op) {
+// Resultado ANÁLISE: baseado no nível calculado (nível médio/referência), stop/alvo de
+// DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py -- é a simulação teórica,
+// não depende de execução real nenhuma.
+function celulaResultadoAnalise(op) {
   if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
   const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
   return `<span class="tag-resultado ${classe}">${op.resultado} (${formatarDolar(valorDolar)})</span>`;
+}
+
+// Resultado ENTRADA: o que a strategy real (ExecutorRegiaoReferenciaMNQ.cs) reportou de volta
+// -- preco_real_entrada != null mas resultado_real ainda null = posição real aberta na conta;
+// preco_real_entrada null = essa operação nunca chegou a ser enviada/preenchida de verdade.
+function celulaResultadoEntrada(op) {
+  if (op.preco_real_entrada == null) return '<span class="detalhe-leve">—</span>';
+  if (op.resultado_real == null) return '<span class="tag-resultado aberta">em aberto</span>';
+  const classe = op.resultado_real === "lucro" ? "lucro" : "prejuizo";
+  return `<span class="tag-resultado ${classe}">${op.resultado_real}</span>`;
 }
 
 /** Classifica cada região em "abaixo" ou "acima" do preço atual (regiões que contêm o preço
@@ -417,10 +430,11 @@ async function atualizar() {
           <td>${formatarPreco(o.preco_entrada)}</td>
           <td>${o.preco_real_entrada != null ? formatarPreco(o.preco_real_entrada) : "—"}</td>
           <td>${o.negocios_acumulados ?? "—"}</td>
-          <td>${celulaResultado(o)}</td>
+          <td>${celulaResultadoAnalise(o)}</td>
+          <td>${celulaResultadoEntrada(o)}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="6" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
+      : '<tr><td colspan="7" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
