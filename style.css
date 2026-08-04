@@ -12,7 +12,7 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 16px 28px;
   border-bottom: 1px solid #262626;
