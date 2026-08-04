@@ -10,162 +10,97 @@
 
 <header class="topo">
   <h1>TapeReading NQ <span class="destaque">estrutura de mercado</span></h1>
-  <div class="topo-direita">
-    <button id="botao-som" class="botao-som ativo">🔔 Som ativado</button>
-    <div class="status" id="status">conectando…</div>
-  </div>
+  <div class="status" id="status">conectando…</div>
 </header>
 
-<nav class="abas">
-  <button class="aba-botao ativa" data-aba="principal">Início</button>
-  <button class="aba-botao" data-aba="detalhes">Regiões e padrões</button>
-</nav>
-
 <main>
-  <div class="aba-painel" id="aba-principal">
-    <section class="hero">
-      <div class="hero-preco">
-        <span class="hero-rotulo">NQ agora</span>
-        <span class="hero-valor" id="preco-valor">—</span>
-        <span class="hero-horario" id="preco-horario"></span>
-      </div>
-      <div class="hero-vies" id="hero-vies">
-        <span class="hero-rotulo">Estrutura</span>
-        <span class="hero-vies-valor" id="vies-valor">—</span>
-      </div>
-    </section>
-
-    <section class="cartao">
-      <h2>Leitura direcional</h2>
-      <table class="tabela-leitura">
-        <thead>
-          <tr><th></th><th class="col-compra">Compra</th><th class="col-venda">Venda</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Abaixo do preço (suporte / resistência já rompida)</td>
-            <td id="leitura-compra-abaixo">—</td>
-            <td id="leitura-venda-abaixo">—</td>
-          </tr>
-          <tr>
-            <td>Acima do preço (resistência / suporte à frente)</td>
-            <td id="leitura-compra-acima">—</td>
-            <td id="leitura-venda-acima">—</td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="leitura-conclusao" id="leitura-conclusao"></p>
-    </section>
-
-    <section class="cartao">
-      <h2>Operações simuladas <span class="subtitulo-leve">(times pequenas, ≤ 3 contratos — região por referência única)</span></h2>
-      <div class="resumo-performance" id="resumo-performance">
-        <div class="resumo-item">
-          <span class="resumo-rotulo">Operações</span>
-          <span class="resumo-valor" id="resumo-operacoes">—</span>
-        </div>
-        <div class="resumo-item">
-          <span class="resumo-rotulo">Taxa de acerto</span>
-          <span class="resumo-valor" id="resumo-acerto">—</span>
-        </div>
-        <div class="resumo-item">
-          <span class="resumo-rotulo">Resultado (U$)</span>
-          <span class="resumo-valor" id="resumo-financeiro">—</span>
-        </div>
-      </div>
-      <div class="grafico-performance" id="grafico-performance" hidden>
-        <div class="grafico-barra">
-          <div class="grafico-barra-rotulo">Gain <span id="grafico-gain-contagem">0</span></div>
-          <div class="grafico-barra-trilho"><div class="grafico-barra-preenchimento gain" id="grafico-barra-gain"></div></div>
-        </div>
-        <div class="grafico-barra">
-          <div class="grafico-barra-rotulo">Stop <span id="grafico-stop-contagem">0</span></div>
-          <div class="grafico-barra-trilho"><div class="grafico-barra-preenchimento stop" id="grafico-barra-stop"></div></div>
-        </div>
-        <svg id="grafico-curva" class="grafico-curva" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
-      </div>
-      <div class="tabela-rolavel">
-        <table class="tabela-padroes">
-          <thead>
-            <tr><th>Horário</th><th>Operação</th><th>Referência</th><th>Tentativas</th><th>Negócios</th><th>Formação</th><th>Resultado</th><th>U$</th><th>Observação</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-operacoes-simuladas">
-            <tr><td colspan="9" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </div>
-
-  <div class="aba-painel" id="aba-detalhes" hidden>
-    <div class="banner-dentro-regiao" id="banner-dentro-regiao" hidden></div>
-    <div class="painel-aguardando" id="painel-aguardando" hidden>
-      <div class="aguardando-rotulo">Padrão identificado — aguardando 3ª tentativa</div>
-      <div class="aguardando-conteudo" id="conteudo-aguardando"></div>
+  <section class="hero">
+    <div class="hero-preco">
+      <span class="hero-rotulo">NQ agora</span>
+      <span class="hero-valor" id="preco-valor">—</span>
+      <span class="hero-horario" id="preco-horario"></span>
     </div>
+    <div class="hero-vies" id="hero-vies">
+      <span class="hero-rotulo">Estrutura</span>
+      <span class="hero-vies-valor" id="vies-valor">—</span>
+    </div>
+  </section>
 
-    <section class="grade-regioes">
-      <div class="cartao">
-        <h2 class="titulo-compra">Regiões compradoras</h2>
-        <table class="tabela-regioes">
-          <thead>
-            <tr><th>Faixa</th><th>Distância</th><th>Travas</th><th>Última trava</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-compra">
-            <tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>
-          </tbody>
-        </table>
+  <section class="cartao">
+    <h2>Leitura direcional</h2>
+    <table class="tabela-leitura">
+      <thead>
+        <tr><th></th><th class="col-compra">Compra</th><th class="col-venda">Venda</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Abaixo do preço (suporte / resistência já rompida)</td>
+          <td id="leitura-compra-abaixo">—</td>
+          <td id="leitura-venda-abaixo">—</td>
+        </tr>
+        <tr>
+          <td>Acima do preço (resistência / suporte à frente)</td>
+          <td id="leitura-compra-acima">—</td>
+          <td id="leitura-venda-acima">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="leitura-conclusao" id="leitura-conclusao"></p>
+  </section>
+
+  <section class="cartao">
+    <h2>Relatório de performance <span class="subtitulo-leve">(times pequenas, ≤ 3 contratos — região por referência única, 1 NQ)</span></h2>
+    <div class="relatorio-grade">
+      <div class="relatorio-coluna">
+        <h3>Todas as operações</h3>
+        <div class="relatorio-linha"><span>P/L bruto</span><span id="rel-pl-bruto">—</span></div>
+        <div class="relatorio-linha"><span># de operações</span><span id="rel-num-operacoes">—</span></div>
+        <div class="relatorio-linha"><span>Tempo médio por operação</span><span id="rel-tempo-medio">—</span></div>
+        <div class="relatorio-linha"><span>Operação mais longa</span><span id="rel-tempo-maior">—</span></div>
+        <div class="relatorio-linha"><span>% de operações lucrativas</span><span id="rel-taxa-acerto">—</span></div>
+        <div class="relatorio-linha"><span>Expectativa por operação</span><span id="rel-expectativa">—</span></div>
       </div>
-
-      <div class="cartao">
-        <h2 class="titulo-venda">Regiões vendedoras</h2>
-        <table class="tabela-regioes">
-          <thead>
-            <tr><th>Faixa</th><th>Distância</th><th>Travas</th><th>Última trava</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-venda">
-            <tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>
-          </tbody>
-        </table>
+      <div class="relatorio-coluna">
+        <h3 class="titulo-compra">Operações vencedoras</h3>
+        <div class="relatorio-linha"><span>Lucro total</span><span id="rel-lucro-total">—</span></div>
+        <div class="relatorio-linha"><span># de vencedoras</span><span id="rel-num-gain">—</span></div>
+        <div class="relatorio-linha"><span>Maior vencedora</span><span id="rel-maior-gain">—</span></div>
+        <div class="relatorio-linha"><span>Média por vencedora</span><span id="rel-media-gain">—</span></div>
+        <div class="relatorio-linha"><span>Desvio padrão</span><span id="rel-desvio-gain">—</span></div>
+        <div class="relatorio-linha"><span>Tempo médio</span><span id="rel-tempo-gain">—</span></div>
+        <div class="relatorio-linha"><span>Máx. run-up</span><span id="rel-max-runup">—</span></div>
       </div>
-    </section>
+      <div class="relatorio-coluna">
+        <h3 class="titulo-venda">Operações perdedoras</h3>
+        <div class="relatorio-linha"><span>Prejuízo total</span><span id="rel-prejuizo-total">—</span></div>
+        <div class="relatorio-linha"><span># de perdedoras</span><span id="rel-num-stop">—</span></div>
+        <div class="relatorio-linha"><span>Maior perdedora</span><span id="rel-maior-stop">—</span></div>
+        <div class="relatorio-linha"><span>Média por perdedora</span><span id="rel-media-stop">—</span></div>
+        <div class="relatorio-linha"><span>Desvio padrão</span><span id="rel-desvio-stop">—</span></div>
+        <div class="relatorio-linha"><span>Tempo médio</span><span id="rel-tempo-stop">—</span></div>
+        <div class="relatorio-linha"><span>Máx. drawdown</span><span id="rel-max-drawdown">—</span></div>
+      </div>
+    </div>
+  </section>
 
-    <section class="cartao">
-      <h2>Travas isoladas <span class="subtitulo-leve">(1 trava só, aguardando confirmação de uma 2ª pra virar região)</span></h2>
+  <section class="cartao">
+    <h2>Resultado acumulado</h2>
+    <svg id="grafico-acumulado" class="grafico-acumulado" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+  </section>
+
+  <section class="cartao">
+    <h2>Operações <span class="subtitulo-leve">(mais recentes primeiro)</span></h2>
+    <div class="tabela-rolavel">
       <table class="tabela-padroes">
         <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Preço</th></tr>
+          <tr><th>Horário</th><th>Operação</th><th>Nível análise</th><th>Nível entrada</th><th>Negócios</th><th>Resultado</th></tr>
         </thead>
-        <tbody id="corpo-tabela-isoladas">
-          <tr><td colspan="3" class="linha-vazia">nenhuma trava isolada</td></tr>
+        <tbody id="corpo-tabela-operacoes-simuladas">
+          <tr><td colspan="6" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
         </tbody>
       </table>
-    </section>
-
-    <section class="cartao">
-      <h2>Padrões confirmados hoje</h2>
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Região</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-padroes">
-          <tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="cartao">
-      <h2>Histórico de calibração <span class="subtitulo-leve">(backtest_regiao_referencia.py — evolução da estratégia de região)</span></h2>
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Data</th><th>Configuração</th><th>Operações</th><th>Acerto</th><th>Resultado</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-backtests">
-          <tr><td colspan="5" class="linha-vazia">nenhum backtest registrado ainda</td></tr>
-        </tbody>
-      </table>
-    </section>
-  </div>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

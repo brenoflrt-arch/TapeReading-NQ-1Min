@@ -1,99 +1,48 @@
 const supabaseCliente = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const INTERVALO_ATUALIZACAO_MS = 3000;
-const LIMITE_PADROES_EXIBIDOS = 20; // mostra só os mais recentes, mais antigo que isso não cabe na tela
-const LIMITE_ISOLADAS_EXIBIDAS = 20;
-// Mesma régua do publicador_dashboard.py (MINIMO_TRAVAS_POR_REGIAO): região só conta pras
-// tabelas principais/leitura direcional com 2+ travas -- o backend agora publica TUDO
-// (inclusive 1 trava só), e é aqui no site que a gente separa confirmada de isolada.
+// Mesma régua do publicador_dashboard.py (MINIMO_TRAVAS_POR_REGIAO): região só conta pra
+// leitura direcional com 2+ travas.
 const MINIMO_TRAVAS_CONFIRMADA = 2;
-// Mesmo valor de FORCA_MINIMA_NOTIFICACAO_PADRAO no servidor.py -- abaixo disso o Telegram
-// NÃO manda o alerta "PADRÃO IDENTIFICADO" (mas o site continua mostrando, só marcado como
-// "fraco", já que lê o log de forma independente e sem esse filtro).
-const FORCA_MINIMA_NOTIFICACAO = 1;
 // Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
 // pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
 const DOLAR_POR_PONTO_OPERACAO = 20;
+const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
 const elementoPrecoHorario = document.getElementById("preco-horario");
 const elementoViesValor = document.getElementById("vies-valor");
-const elementoBannerDentro = document.getElementById("banner-dentro-regiao");
-const elementoPainelAguardando = document.getElementById("painel-aguardando");
-const elementoConteudoAguardando = document.getElementById("conteudo-aguardando");
 const elementoLeituraCompraAbaixo = document.getElementById("leitura-compra-abaixo");
 const elementoLeituraVendaAbaixo = document.getElementById("leitura-venda-abaixo");
 const elementoLeituraCompraAcima = document.getElementById("leitura-compra-acima");
 const elementoLeituraVendaAcima = document.getElementById("leitura-venda-acima");
 const elementoLeituraConclusao = document.getElementById("leitura-conclusao");
-const elementoCorpoTabelaCompra = document.getElementById("corpo-tabela-compra");
-const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
-const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
-const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
-const elementoCorpoTabelaBacktests = document.getElementById("corpo-tabela-backtests");
-const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
-const elementoResumoOperacoes = document.getElementById("resumo-operacoes");
-const elementoResumoAcerto = document.getElementById("resumo-acerto");
-const elementoResumoFinanceiro = document.getElementById("resumo-financeiro");
-const elementoGraficoPerformance = document.getElementById("grafico-performance");
-const elementoGraficoGainContagem = document.getElementById("grafico-gain-contagem");
-const elementoGraficoStopContagem = document.getElementById("grafico-stop-contagem");
-const elementoGraficoBarraGain = document.getElementById("grafico-barra-gain");
-const elementoGraficoBarraStop = document.getElementById("grafico-barra-stop");
-const elementoGraficoCurva = document.getElementById("grafico-curva");
+const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 
-// ---- Abas: só troca qual painel fica visível -- os dados continuam sendo buscados e
-// atualizados nos dois em segundo plano, então trocar de aba mostra tudo já atualizado. ----
-for (const botao of document.querySelectorAll(".aba-botao")) {
-  botao.addEventListener("click", () => {
-    for (const b of document.querySelectorAll(".aba-botao")) b.classList.remove("ativa");
-    botao.classList.add("ativa");
-    for (const painel of document.querySelectorAll(".aba-painel")) painel.hidden = true;
-    document.getElementById("aba-" + botao.dataset.aba).hidden = false;
-  });
-}
-const elementoBotaoSom = document.getElementById("botao-som");
-
-// ---- Áudio (mesmo .mp3 de voz gravado pelo usuário, usado pelo servidor.py) tocado toda vez
-// que um nível novo fica "aguardando 3ª tentativa". Ligado por padrão (o botão agora serve pra
-// MUTAR, não pra ativar) -- mas navegadores só liberam áudio de verdade depois de alguma
-// interação do usuário com a página, então destrava no primeiro clique em QUALQUER lugar, não
-// só no botão (o botão continua funcionando como mute/unmute manual).
-// Os áudios "compradores travando"/"vendedores travando" NÃO tocam mais aqui -- esse par foi
-// realocado (2026-08-04) pro analisador_tentativas_pequenas.py, que os dispara pro padrão de
-// times pequenos (<= 3 contratos), não pra este site (que só lê o times filtrado >= 3). ----
-let somAtivado = true;
-const audioPadraoIdentificado = new Audio("sons/segunda_trava_validada.mp3");
-
-elementoBotaoSom.textContent = "🔔 Som ativado";
-elementoBotaoSom.classList.add("ativo");
-
-let audioDestravado = false;
-function destravarAudio() {
-  if (audioDestravado) return;
-  audioDestravado = true;
-  audioPadraoIdentificado.play().then(() => audioPadraoIdentificado.pause()).catch(() => {});
-}
-document.addEventListener("click", destravarAudio, { once: true });
-
-elementoBotaoSom.addEventListener("click", () => {
-  somAtivado = !somAtivado;
-  elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔕 Som mutado";
-  elementoBotaoSom.classList.toggle("ativo", somAtivado);
-});
-
-function tocarAudioPadraoIdentificado() {
-  if (!somAtivado) return;
-  audioPadraoIdentificado.currentTime = 0;
-  audioPadraoIdentificado.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
-}
-
-// id_oferta do nível "aguardando 3ª tentativa" ativo visto por último -- na primeira carga só
-// registra, depois toca o áudio quando um nível NOVO fica ativo (não repete a cada 3s
-// enquanto o mesmo nível continua ativo).
-let idNivelAguardandoVisto = undefined; // undefined = ainda não checou; null = nenhum ativo
+const elementosRelatorio = {
+  plBruto: document.getElementById("rel-pl-bruto"),
+  numOperacoes: document.getElementById("rel-num-operacoes"),
+  tempoMedio: document.getElementById("rel-tempo-medio"),
+  tempoMaior: document.getElementById("rel-tempo-maior"),
+  taxaAcerto: document.getElementById("rel-taxa-acerto"),
+  expectativa: document.getElementById("rel-expectativa"),
+  lucroTotal: document.getElementById("rel-lucro-total"),
+  numGain: document.getElementById("rel-num-gain"),
+  maiorGain: document.getElementById("rel-maior-gain"),
+  mediaGain: document.getElementById("rel-media-gain"),
+  desvioGain: document.getElementById("rel-desvio-gain"),
+  tempoGain: document.getElementById("rel-tempo-gain"),
+  maxRunup: document.getElementById("rel-max-runup"),
+  prejuizoTotal: document.getElementById("rel-prejuizo-total"),
+  numStop: document.getElementById("rel-num-stop"),
+  maiorStop: document.getElementById("rel-maior-stop"),
+  mediaStop: document.getElementById("rel-media-stop"),
+  desvioStop: document.getElementById("rel-desvio-stop"),
+  tempoStop: document.getElementById("rel-tempo-stop"),
+  maxDrawdown: document.getElementById("rel-max-drawdown"),
+};
 
 /** Preço mais recente negociado -- não usa cotacao_atual (o servidor.py só grava lá fora do
  *  modo SOMENTE_ANALISE) -- negociacoes_tempo_real é publicado por publicador_dashboard.py
@@ -116,73 +65,39 @@ async function buscarRegioesMercado() {
   return data;
 }
 
-async function buscarNivelAguardando() {
-  // Por design só devia existir 1 linha ativo=true por vez (ver publicar_niveis_aguardando em
-  // publicador_dashboard.py), mas ordena por atualizado_em desc por segurança -- se alguma
-  // vez sobrar mais de uma ativa (ex.: corrida entre desativar a antiga e ativar a nova),
-  // pega sempre a mais recente, não uma qualquer.
-  const { data, error } = await supabaseCliente
-    .from("niveis_aguardando_3_tentativa")
-    .select("id_oferta,nivel_preco,operacao,forca")
-    .eq("ativo", true)
-    .order("atualizado_em", { ascending: false })
-    .limit(1);
-  if (error) throw error;
-  return data[0] || null;
-}
-
-async function buscarPadroesRecentes() {
-  // Ordena por criado_em (timestamptz de verdade, com data), NÃO por horario_segunda (só
-  // "HH:MM:SS", sem data) -- senão um padrão de 23h de ontem parece "mais recente" que um de
-  // 06h de hoje, já que "23" > "06" como texto puro.
-  const { data, error } = await supabaseCliente
-    .from("padroes_1_2_tentativa")
-    .select("id,horario_segunda,regiao_preco,operacao,forca")
-    .order("criado_em", { ascending: false })
-    .limit(LIMITE_PADROES_EXIBIDOS);
-  if (error) throw error;
-  return data;
-}
-
-async function buscarBacktestsCalibracao() {
-  // Histórico do backtest_regiao_referencia.py -- registrado manualmente a cada rodada de
-  // calibração (não é gerado automaticamente pelo analisador ao vivo).
-  const { data, error } = await supabaseCliente
-    .from("backtests_calibracao")
-    .select("data,descricao,parametros,operacoes,gain,stop,taxa_acerto,resultado_pontos,resultado_dolar_2mnq,criado_em")
-    .order("criado_em", { ascending: true });
-  if (error) throw error;
-  return data;
-}
-
 async function buscarOperacoesSimuladas() {
   // Vem do analisador_tentativas_pequenas.py (times filtrado <= 3 contratos, rodando local,
   // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
-  // Sem limit aqui de propósito: a performance (resumo/gráfico) precisa de TODAS as operações do
+  // Sem limit aqui de propósito: o relatório de performance precisa de TODAS as operações do
   // dia, não só as mais recentes -- a tabela na tela é que corta pra LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
-    .select("id,operacao,preco_entrada,preco_real_entrada,tentativas,negocios_acumulados,minutos_formacao,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
+    .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_pontos,horario_entrada,horario_resultado,criado_em")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false });
   if (error) throw error;
   return data;
 }
 
-function tagFraco(forca) {
-  return forca < FORCA_MINIMA_NOTIFICACAO
-    ? ' <span class="tag-fraco" title="Força da trava abaixo do mínimo -- o Telegram não notificou esse padrão">fraco</span>'
-    : "";
-}
-
 function formatarPreco(preco) {
   return preco.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatarDolar(valor) {
+  const sinal = valor > 0 ? "+" : valor < 0 ? "-" : "";
+  return `${sinal}U$ ${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function celulaResultado(op) {
+  if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
+  const classe = op.status === "gain" ? "lucro" : "prejuizo";
+  const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
+  return `<span class="tag-resultado ${classe}">${op.resultado} (${formatarDolar(valorDolar)})</span>`;
+}
+
 /** Classifica cada região em "abaixo" ou "acima" do preço atual (regiões que contêm o preço
- *  entram nas duas listas de cartões, mas não contam pra leitura direcional -- ver
- *  calcularLeituraDirecional). Cada região ganha uma "distância" (0 se contém o preço) pra
- *  ordenar as tabelas da mais próxima pra mais longe. */
+ *  entram nas duas listas, mas não contam pra leitura direcional -- ver calcularLeituraDirecional).
+ *  Cada região ganha uma "distância" (0 se contém o preço) pra ordenar da mais próxima pra mais longe. */
 function classificarRegioes(regioes, precoAtual) {
   const comDistancia = regioes.map((r) => {
     let distancia;
@@ -234,103 +149,187 @@ function celulaLeitura(quantidadeRegioes, travas) {
   return `${travas} trava${travas === 1 ? "" : "s"} <span class="detalhe-leve">(${quantidadeRegioes} região${quantidadeRegioes === 1 ? "" : "ões"})</span>`;
 }
 
-function celulaResultado(op) {
-  if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
-  if (op.status === "cancelada") return '<span class="tag-resultado cancelada">cancelada</span>';
-  const classe = op.status === "gain" ? "lucro" : "prejuizo";
-  const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
-  return `<span class="tag-resultado ${classe}">${op.resultado} (${formatarDolar(valorDolar)})</span>`;
+// ---- Relatório de performance (estilo "Trade Performance" do NinjaTrader) ----
+
+function horarioParaMs(horario) {
+  const [hh, mm, ss] = horario.split(":");
+  return (parseInt(hh, 10) * 3600 + parseInt(mm, 10) * 60 + parseFloat(ss)) * 1000;
 }
 
-function formatarDolar(valor) {
-  const sinal = valor > 0 ? "+" : valor < 0 ? "-" : "";
-  return `${sinal}U$ ${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatarDuracao(ms) {
+  if (!isFinite(ms) || ms < 0) return "—";
+  const totalSeg = Math.round(ms / 1000);
+  const min = Math.floor(totalSeg / 60);
+  const seg = totalSeg % 60;
+  return `${min}min ${seg}s`;
 }
 
-/** Resumo (operações resolvidas, taxa de acerto, resultado em $ com 1 NQ) + gráfico (barra
- *  gain/stop + curva de patrimônio acumulado) -- usa TODAS as operações do dia (não só as
- *  exibidas na tabela), em ordem cronológica (a query já vem desc, então inverte aqui). */
-function atualizarPerformance(operacoesSimuladas) {
-  const resolvidas = [...operacoesSimuladas]
-    .filter((o) => o.status === "gain" || o.status === "stop")
-    .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+function somar(lista) {
+  return lista.reduce((a, b) => a + b, 0);
+}
 
-  if (resolvidas.length === 0) {
-    elementoResumoOperacoes.textContent = "—";
-    elementoResumoAcerto.textContent = "—";
-    elementoResumoFinanceiro.textContent = "—";
-    elementoGraficoPerformance.hidden = true;
+function media(lista) {
+  return lista.length ? somar(lista) / lista.length : 0;
+}
+
+function desvioPadrao(lista) {
+  if (lista.length < 2) return 0;
+  const m = media(lista);
+  const variancia = somar(lista.map((v) => (v - m) ** 2)) / (lista.length - 1);
+  return Math.sqrt(variancia);
+}
+
+/** Constrói a curva de patrimônio acumulado (1 ponto por operação resolvida, em ordem
+ *  cronológica) e junto calcula máx. run-up (maior alta do vale até o pico seguinte) e máx.
+ *  drawdown (maior queda do pico até o vale seguinte) -- mesmo conceito do relatório do Ninja. */
+function calcularEstatisticas(resolvidas) {
+  const gains = resolvidas.filter((o) => o.status === "gain");
+  const stops = resolvidas.filter((o) => o.status === "stop");
+
+  const valores = resolvidas.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
+  const valoresGain = gains.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
+  const valoresStop = stops.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
+
+  const duracao = (o) => horarioParaMs(o.horario_resultado) - horarioParaMs(o.horario_entrada);
+  const duracoesTodas = resolvidas.map(duracao);
+  const duracoesGain = gains.map(duracao);
+  const duracoesStop = stops.map(duracao);
+
+  let acumulado = 0;
+  const curva = resolvidas.map((o) => {
+    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
+    return { valor: acumulado, horario: o.horario_resultado, status: o.status };
+  });
+
+  let maxRunup = 0, runupDe = null, runupPara = null;
+  let maxDrawdown = 0, drawdownDe = null, drawdownPara = null;
+  let minAteAgora = 0, horarioMin = resolvidas[0] ? resolvidas[0].horario_entrada : null;
+  let maxAteAgora = 0, horarioMax = resolvidas[0] ? resolvidas[0].horario_entrada : null;
+
+  for (const ponto of curva) {
+    const runupAtual = ponto.valor - minAteAgora;
+    if (runupAtual > maxRunup) {
+      maxRunup = runupAtual;
+      runupDe = horarioMin;
+      runupPara = ponto.horario;
+    }
+    if (ponto.valor < minAteAgora) {
+      minAteAgora = ponto.valor;
+      horarioMin = ponto.horario;
+    }
+
+    const drawdownAtual = ponto.valor - maxAteAgora;
+    if (drawdownAtual < maxDrawdown) {
+      maxDrawdown = drawdownAtual;
+      drawdownDe = horarioMax;
+      drawdownPara = ponto.horario;
+    }
+    if (ponto.valor > maxAteAgora) {
+      maxAteAgora = ponto.valor;
+      horarioMax = ponto.horario;
+    }
+  }
+
+  return {
+    curva,
+    plBruto: somar(valores),
+    numOperacoes: resolvidas.length,
+    tempoMedio: media(duracoesTodas),
+    tempoMaior: duracoesTodas.length ? Math.max(...duracoesTodas) : 0,
+    taxaAcerto: resolvidas.length ? (gains.length / resolvidas.length) * 100 : 0,
+    expectativa: resolvidas.length ? somar(valores) / resolvidas.length : 0,
+
+    lucroTotal: somar(valoresGain),
+    numGain: gains.length,
+    maiorGain: valoresGain.length ? Math.max(...valoresGain) : 0,
+    mediaGain: media(valoresGain),
+    desvioGain: desvioPadrao(valoresGain),
+    tempoGain: media(duracoesGain),
+    maxRunup, runupDe, runupPara,
+
+    prejuizoTotal: somar(valoresStop),
+    numStop: stops.length,
+    maiorStop: valoresStop.length ? Math.min(...valoresStop) : 0,
+    mediaStop: media(valoresStop),
+    desvioStop: desvioPadrao(valoresStop),
+    tempoStop: media(duracoesStop),
+    maxDrawdown, drawdownDe, drawdownPara,
+  };
+}
+
+function preencherRelatorio(est) {
+  const el = elementosRelatorio;
+  el.plBruto.textContent = formatarDolar(est.plBruto);
+  el.plBruto.className = est.plBruto >= 0 ? "positivo" : "negativo";
+  el.numOperacoes.textContent = est.numOperacoes;
+  el.tempoMedio.textContent = formatarDuracao(est.tempoMedio);
+  el.tempoMaior.textContent = formatarDuracao(est.tempoMaior);
+  el.taxaAcerto.textContent = `${est.taxaAcerto.toFixed(1)}%`;
+  el.expectativa.textContent = formatarDolar(est.expectativa);
+
+  el.lucroTotal.textContent = formatarDolar(est.lucroTotal);
+  el.numGain.textContent = est.numGain;
+  el.maiorGain.textContent = formatarDolar(est.maiorGain);
+  el.mediaGain.textContent = formatarDolar(est.mediaGain);
+  el.desvioGain.textContent = formatarDolar(est.desvioGain);
+  el.tempoGain.textContent = est.numGain ? formatarDuracao(est.tempoGain) : "—";
+  el.maxRunup.textContent = est.runupPara
+    ? `${formatarDolar(est.maxRunup)} (${est.runupDe.slice(0, 8)} → ${est.runupPara.slice(0, 8)})`
+    : "—";
+
+  el.prejuizoTotal.textContent = formatarDolar(est.prejuizoTotal);
+  el.numStop.textContent = est.numStop;
+  el.maiorStop.textContent = formatarDolar(est.maiorStop);
+  el.mediaStop.textContent = formatarDolar(est.mediaStop);
+  el.desvioStop.textContent = formatarDolar(est.desvioStop);
+  el.tempoStop.textContent = est.numStop ? formatarDuracao(est.tempoStop) : "—";
+  el.maxDrawdown.textContent = est.drawdownPara
+    ? `${formatarDolar(est.maxDrawdown)} (${est.drawdownDe.slice(0, 8)} → ${est.drawdownPara.slice(0, 8)})`
+    : "—";
+}
+
+/** Gráfico de barras do resultado acumulado (1 barra por operação, altura = patrimônio
+ *  acumulado naquele ponto, cor = se aquela operação foi gain/stop) -- mesmo estilo do
+ *  relatório "P&L History" do NinjaTrader. */
+function desenharGraficoAcumulado(curva) {
+  const largura = 600;
+  const altura = 200;
+
+  if (curva.length === 0) {
+    elementoGraficoAcumulado.innerHTML = "";
     return;
   }
 
-  const gains = resolvidas.filter((o) => o.status === "gain");
-  const stops = resolvidas.filter((o) => o.status === "stop");
-  const taxaAcerto = (gains.length / resolvidas.length) * 100;
+  const valores = curva.map((p) => p.valor);
+  const minimo = Math.min(0, ...valores);
+  const maximo = Math.max(0, ...valores);
+  const amplitude = (maximo - minimo) || 1;
 
-  let acumulado = 0;
-  const pontosCurva = resolvidas.map((o) => {
-    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
-    return acumulado;
-  });
-  const resultadoTotal = acumulado;
+  const paraY = (v) => altura - ((v - minimo) / amplitude) * altura;
+  const yZero = paraY(0);
+  const larguraBarra = Math.max(1, largura / curva.length - 1);
 
-  elementoResumoOperacoes.textContent = resolvidas.length;
-  elementoResumoAcerto.textContent = `${taxaAcerto.toFixed(1)}%`;
-  elementoResumoFinanceiro.textContent = formatarDolar(resultadoTotal);
-  elementoResumoFinanceiro.className = "resumo-valor " + (resultadoTotal >= 0 ? "positivo" : "negativo");
+  const barras = curva.map((p, i) => {
+    const x = (i / curva.length) * largura;
+    const yValor = paraY(p.valor);
+    const y = Math.min(yValor, yZero);
+    const alturaBarra = Math.max(1, Math.abs(yValor - yZero));
+    const cor = p.status === "gain" ? "#15803d" : "#ef5350";
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${larguraBarra.toFixed(1)}" height="${alturaBarra.toFixed(1)}" fill="${cor}" />`;
+  }).join("");
 
-  elementoGraficoPerformance.hidden = false;
-  elementoGraficoGainContagem.textContent = gains.length;
-  elementoGraficoStopContagem.textContent = stops.length;
-  const maiorLado = Math.max(gains.length, stops.length, 1);
-  elementoGraficoBarraGain.style.width = `${(gains.length / maiorLado) * 100}%`;
-  elementoGraficoBarraStop.style.width = `${(stops.length / maiorLado) * 100}%`;
-
-  desenharCurvaPatrimonio(pontosCurva);
-}
-
-function desenharCurvaPatrimonio(pontosCurva) {
-  const largura = 600;
-  const altura = 140;
-  const minimo = Math.min(0, ...pontosCurva);
-  const maximo = Math.max(0, ...pontosCurva);
-  const amplitude = maximo - minimo || 1;
-
-  const paraX = (i) => (pontosCurva.length <= 1 ? 0 : (i / (pontosCurva.length - 1)) * largura);
-  const paraY = (valor) => altura - ((valor - minimo) / amplitude) * altura;
-
-  const pontos = pontosCurva.map((v, i) => `${paraX(i).toFixed(1)},${paraY(v).toFixed(1)}`).join(" ");
-  const corLinha = pontosCurva[pontosCurva.length - 1] >= 0 ? "#15803d" : "#ef5350";
-  const yZero = paraY(0).toFixed(1);
-
-  elementoGraficoCurva.innerHTML = `
-    <line x1="0" y1="${yZero}" x2="${largura}" y2="${yZero}" stroke="#2a2e39" stroke-width="1" stroke-dasharray="4,4" />
-    <polyline points="${pontos}" fill="none" stroke="${corLinha}" stroke-width="2" />
-  `;
-}
-
-function linhaTabelaRegiao(r) {
-  const distanciaTexto = r.posicao === "dentro" ? "dentro agora" : `${r.distancia.toFixed(2)} pts ${r.posicao}`;
-  const horario = r.ultima_trava_em ? r.ultima_trava_em.slice(0, 8) : "—";
-  return `
-    <tr>
-      <td>${formatarPreco(r.minima)} – ${formatarPreco(r.maxima)}</td>
-      <td>${distanciaTexto}</td>
-      <td>${r.quantidade_travas}</td>
-      <td>${horario}</td>
-    </tr>
+  elementoGraficoAcumulado.innerHTML = `
+    <line x1="0" y1="${yZero.toFixed(1)}" x2="${largura}" y2="${yZero.toFixed(1)}" stroke="#2a2e39" stroke-width="1" stroke-dasharray="4,4" />
+    ${barras}
   `;
 }
 
 async function atualizar() {
   try {
-    const [precoAtual, regioes, nivelAguardando, padroes, operacoesSimuladas, backtests] = await Promise.all([
+    const [precoAtual, regioes, operacoesSimuladas] = await Promise.all([
       buscarPrecoAtual(),
       buscarRegioesMercado(),
-      buscarNivelAguardando(),
-      buscarPadroesRecentes(),
       buscarOperacoesSimuladas(),
-      buscarBacktestsCalibracao(),
     ]);
 
     if (!precoAtual) {
@@ -343,19 +342,7 @@ async function atualizar() {
     elementoPrecoHorario.textContent = precoAtual.horario.slice(0, 8);
 
     const regioesConfirmadas = regioes.filter((r) => r.quantidade_travas >= MINIMO_TRAVAS_CONFIRMADA);
-    const regioesIsoladas = regioes.filter((r) => r.quantidade_travas < MINIMO_TRAVAS_CONFIRMADA);
-
     const regioesClassificadas = classificarRegioes(regioesConfirmadas, precoAtual.preco);
-    const regiaoDentro = regioesClassificadas.find((r) => r.posicao === "dentro");
-
-    if (regiaoDentro) {
-      elementoBannerDentro.hidden = false;
-      elementoBannerDentro.className = "banner-dentro-regiao " + regiaoDentro.operacao;
-      elementoBannerDentro.textContent =
-        `Preço dentro de uma região ${regiaoDentro.operacao} agora (${formatarPreco(regiaoDentro.minima)} – ${formatarPreco(regiaoDentro.maxima)}, ${regiaoDentro.quantidade_travas} travas)`;
-    } else {
-      elementoBannerDentro.hidden = true;
-    }
 
     const leitura = calcularLeituraDirecional(regioesClassificadas);
     elementoLeituraCompraAbaixo.innerHTML = celulaLeitura(leitura.contagem.compraAbaixo, leitura.soma.compraAbaixo);
@@ -374,85 +361,12 @@ async function atualizar() {
     elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
     elementoLeituraConclusao.className = "leitura-conclusao " + leitura.vies;
 
-    // Ordena por atualizado_em (timestamptz de verdade, com data) -- NÃO por ultima_trava_em
-    // (só "HH:MM:SS", sem data), pelo mesmo motivo do buscarPadroesRecentes: senão uma trava
-    // de 23h de ontem parece "mais recente" que uma de 06h de hoje. A "distância" continua
-    // calculada e mostrada na coluna, só não é mais o critério de ordem das linhas.
-    const porAtualizadoDesc = (a, b) => (b.atualizado_em || "").localeCompare(a.atualizado_em || "");
-    const regioesCompra = regioesClassificadas.filter((r) => r.operacao === "compra").sort(porAtualizadoDesc);
-    const regioesVenda = regioesClassificadas.filter((r) => r.operacao === "venda").sort(porAtualizadoDesc);
-
-    elementoCorpoTabelaCompra.innerHTML = regioesCompra.length
-      ? regioesCompra.map(linhaTabelaRegiao).join("")
-      : '<tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>';
-
-    elementoCorpoTabelaVenda.innerHTML = regioesVenda.length
-      ? regioesVenda.map(linhaTabelaRegiao).join("")
-      : '<tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>';
-
-    const isoladasRecentes = [...regioesIsoladas]
-      .sort(porAtualizadoDesc)
-      .slice(0, LIMITE_ISOLADAS_EXIBIDAS);
-
-    elementoCorpoTabelaIsoladas.innerHTML = isoladasRecentes.length
-      ? isoladasRecentes.map((r) => `
-        <tr>
-          <td>${r.ultima_trava_em ? r.ultima_trava_em.slice(0, 8) : "—"}</td>
-          <td><span class="tag-operacao ${r.operacao}">${r.operacao}</span></td>
-          <td>${formatarPreco(r.minima)}</td>
-        </tr>
-      `).join("")
-      : '<tr><td colspan="3" class="linha-vazia">nenhuma trava isolada</td></tr>';
-
-    if (nivelAguardando) {
-      elementoPainelAguardando.hidden = false;
-      elementoPainelAguardando.className = "painel-aguardando " + nivelAguardando.operacao;
-      elementoConteudoAguardando.innerHTML =
-        `<span class="tag-operacao ${nivelAguardando.operacao}">${nivelAguardando.operacao}</span> ` +
-        `nível ${formatarPreco(nivelAguardando.nivel_preco)}${tagFraco(nivelAguardando.forca)}`;
-    } else {
-      elementoPainelAguardando.hidden = true;
-    }
-
-    const idNivelAtual = nivelAguardando ? nivelAguardando.id_oferta : null;
-    if (idNivelAguardandoVisto === undefined) {
-      // primeira carga da página: só registra, não toca o histórico.
-      idNivelAguardandoVisto = idNivelAtual;
-    } else if (idNivelAtual && idNivelAtual !== idNivelAguardandoVisto) {
-      // Só marca como "visto" quando o som REALMENTE tocar -- se o padrão ficou ativo com o
-      // som desligado, fica pendente (continua tentando a cada ciclo) até o usuário ativar o
-      // som, em vez de considerar "já avisado" silenciosamente.
-      if (somAtivado) {
-        tocarAudioPadraoIdentificado();
-        idNivelAguardandoVisto = idNivelAtual;
-      }
-    } else if (!idNivelAtual) {
-      idNivelAguardandoVisto = null;
-    }
-
-    elementoCorpoTabelaPadroes.innerHTML = padroes.length
-      ? padroes.map((p) => `
-        <tr>
-          <td>${p.horario_segunda.slice(0, 8)}</td>
-          <td><span class="tag-operacao ${p.operacao}">${p.operacao}</span>${tagFraco(p.forca)}</td>
-          <td>${formatarPreco(p.regiao_preco)}</td>
-        </tr>
-      `).join("")
-      : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
-
-    elementoCorpoTabelaBacktests.innerHTML = backtests.length
-      ? backtests.map((b) => `
-        <tr>
-          <td>${b.data}</td>
-          <td>${b.descricao}<div class="detalhe-leve">${b.parametros}</div></td>
-          <td>${b.operacoes} <span class="detalhe-leve">(${b.gain}g/${b.stop}s)</span></td>
-          <td>${b.taxa_acerto.toFixed(1)}%</td>
-          <td>${b.resultado_pontos > 0 ? "+" : ""}${b.resultado_pontos} pts <span class="detalhe-leve">(${formatarDolar(b.resultado_dolar_2mnq)})</span></td>
-        </tr>
-      `).join("")
-      : '<tr><td colspan="5" class="linha-vazia">nenhum backtest registrado ainda</td></tr>';
-
-    atualizarPerformance(operacoesSimuladas);
+    const resolvidas = [...operacoesSimuladas]
+      .filter((o) => o.status === "gain" || o.status === "stop")
+      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    const est = calcularEstatisticas(resolvidas);
+    preencherRelatorio(est);
+    desenharGraficoAcumulado(est.curva);
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
@@ -460,18 +374,15 @@ async function atualizar() {
         <tr>
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
-          <td>${formatarPreco(o.preco_entrada)}${o.preco_real_entrada != null ? ` <span class="detalhe-leve">(real: ${formatarPreco(o.preco_real_entrada)})</span>` : ""}</td>
-          <td>${o.tentativas}</td>
+          <td>${formatarPreco(o.preco_entrada)}</td>
+          <td>${o.preco_real_entrada != null ? formatarPreco(o.preco_real_entrada) : "—"}</td>
           <td>${o.negocios_acumulados ?? "—"}</td>
-          <td>${o.minutos_formacao != null ? `${o.minutos_formacao.toFixed(1)}min` : "—"}</td>
           <td>${celulaResultado(o)}</td>
-          <td>${o.resultado_pontos != null ? formatarDolar(o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO) : "—"}</td>
-          <td class="detalhe-leve">${o.observacao || "—"}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="9" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
+      : '<tr><td colspan="6" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
-    elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
+    elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
   } catch (erro) {
     console.error(erro);
