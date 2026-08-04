@@ -162,7 +162,7 @@ async function buscarOperacoesSimuladas() {
   // dia, não só as mais recentes -- a tabela na tela é que corta pra LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
-    .select("id,operacao,preco_entrada,tentativas,negocios_acumulados,minutos_formacao,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
+    .select("id,operacao,preco_entrada,preco_real_entrada,tentativas,negocios_acumulados,minutos_formacao,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false });
   if (error) throw error;
@@ -460,7 +460,7 @@ async function atualizar() {
         <tr>
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
-          <td>${formatarPreco(o.preco_entrada)}</td>
+          <td>${formatarPreco(o.preco_entrada)}${o.preco_real_entrada != null ? ` <span class="detalhe-leve">(real: ${formatarPreco(o.preco_real_entrada)})</span>` : ""}</td>
           <td>${o.tentativas}</td>
           <td>${o.negocios_acumulados ?? "—"}</td>
           <td>${o.minutos_formacao != null ? `${o.minutos_formacao.toFixed(1)}min` : "—"}</td>
