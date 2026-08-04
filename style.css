@@ -77,16 +77,15 @@ main {
   gap: 18px;
 }
 
-/* ---- hero (preço + viés) ---- */
+/* ---- hero (preço atual) ---- */
 
 .hero {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
-.hero-preco,
-.hero-vies {
+.hero-preco {
   background: #0a0a0a;
   border: 1px solid #262626;
   border-radius: 10px;
@@ -114,15 +113,6 @@ main {
   font-size: 12px;
   color: #666;
 }
-
-.hero-vies-valor {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.hero-vies-valor.alta { color: #15803d; }
-.hero-vies-valor.baixa { color: #ef5350; }
-.hero-vies-valor.neutro { color: #d19a3d; }
 
 /* ---- cartões genéricos ---- */
 
@@ -241,9 +231,6 @@ thead th {
   border-bottom: 1px solid #262626;
 }
 
-.tabela-leitura thead th.col-compra { color: #15803d; }
-.tabela-leitura thead th.col-venda { color: #ef5350; }
-
 tbody td {
   padding: 10px;
   border-bottom: 1px solid #1a1a1a;
@@ -262,24 +249,6 @@ tbody tr:hover td {
   color: #555;
   text-align: center;
   font-style: italic;
-}
-
-.leitura-conclusao {
-  margin: 14px 0 0;
-  font-size: 14px;
-  font-weight: 600;
-  padding-top: 12px;
-  border-top: 1px solid #262626;
-}
-
-.leitura-conclusao.alta { color: #15803d; }
-.leitura-conclusao.baixa { color: #ef5350; }
-.leitura-conclusao.neutro { color: #d19a3d; }
-
-@media (max-width: 720px) {
-  .hero {
-    grid-template-columns: 1fr;
-  }
 }
 
 .tag-operacao {

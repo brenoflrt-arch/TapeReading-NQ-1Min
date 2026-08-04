@@ -1,9 +1,6 @@
 const supabaseCliente = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const INTERVALO_ATUALIZACAO_MS = 3000;
-// Mesma régua do publicador_dashboard.py (MINIMO_TRAVAS_POR_REGIAO): região só conta pra
-// leitura direcional com 2+ travas.
-const MINIMO_TRAVAS_CONFIRMADA = 2;
 // Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
 // pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
 const DOLAR_POR_PONTO_OPERACAO = 20;
@@ -12,12 +9,6 @@ const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
 const elementoPrecoHorario = document.getElementById("preco-horario");
-const elementoViesValor = document.getElementById("vies-valor");
-const elementoLeituraCompraAbaixo = document.getElementById("leitura-compra-abaixo");
-const elementoLeituraVendaAbaixo = document.getElementById("leitura-venda-abaixo");
-const elementoLeituraCompraAcima = document.getElementById("leitura-compra-acima");
-const elementoLeituraVendaAcima = document.getElementById("leitura-venda-acima");
-const elementoLeituraConclusao = document.getElementById("leitura-conclusao");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 const elementoBotaoSom = document.getElementById("botao-som");
@@ -85,14 +76,6 @@ async function buscarPrecoAtual() {
   return data[0] || null;
 }
 
-async function buscarRegioesMercado() {
-  const { data, error } = await supabaseCliente
-    .from("regioes_mercado")
-    .select("id,operacao,minima,maxima,quantidade_travas,ultima_trava_em,atualizado_em");
-  if (error) throw error;
-  return data;
-}
-
 async function buscarOperacoesSimuladas() {
   // Vem do analisador_tentativas_pequenas.py (times filtrado <= 3 contratos, rodando local,
   // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
@@ -134,60 +117,6 @@ function celulaResultadoEntrada(op) {
   if (op.resultado_real == null) return '<span class="tag-resultado aberta">em aberto</span>';
   const classe = op.resultado_real === "lucro" ? "lucro" : "prejuizo";
   return `<span class="tag-resultado ${classe}">${op.resultado_real}</span>`;
-}
-
-/** Classifica cada região em "abaixo" ou "acima" do preço atual (regiões que contêm o preço
- *  entram nas duas listas, mas não contam pra leitura direcional -- ver calcularLeituraDirecional).
- *  Cada região ganha uma "distância" (0 se contém o preço) pra ordenar da mais próxima pra mais longe. */
-function classificarRegioes(regioes, precoAtual) {
-  const comDistancia = regioes.map((r) => {
-    let distancia;
-    let posicao;
-    if (precoAtual >= r.minima && precoAtual <= r.maxima) {
-      distancia = 0;
-      posicao = "dentro";
-    } else if (r.minima > precoAtual) {
-      distancia = r.minima - precoAtual;
-      posicao = "acima";
-    } else {
-      distancia = precoAtual - r.maxima;
-      posicao = "abaixo";
-    }
-    return { ...r, distancia, posicao };
-  });
-  comDistancia.sort((a, b) => a.distancia - b.distancia);
-  return comDistancia;
-}
-
-/** Suporte = travas de COMPRA abaixo do preço (defenderam a queda até aqui); resistência =
- *  travas de VENDA acima do preço (seguraram a alta até aqui). Regiões do lado "errado"
- *  (venda abaixo, compra acima) são zonas que o preço já superou/ainda não chegou -- entram
- *  na tabela de leitura como contexto, mas não pesam na conclusão do viés. */
-function calcularLeituraDirecional(regioesClassificadas) {
-  const soma = { compraAbaixo: 0, vendaAbaixo: 0, compraAcima: 0, vendaAcima: 0 };
-  const contagem = { compraAbaixo: 0, vendaAbaixo: 0, compraAcima: 0, vendaAcima: 0 };
-
-  for (const r of regioesClassificadas) {
-    if (r.posicao === "dentro") continue;
-    const chave = r.operacao === "compra"
-      ? (r.posicao === "abaixo" ? "compraAbaixo" : "compraAcima")
-      : (r.posicao === "abaixo" ? "vendaAbaixo" : "vendaAcima");
-    soma[chave] += r.quantidade_travas;
-    contagem[chave] += 1;
-  }
-
-  const suporte = soma.compraAbaixo;
-  const resistencia = soma.vendaAcima;
-  let vies = "neutro";
-  if (suporte > resistencia) vies = "alta";
-  else if (resistencia > suporte) vies = "baixa";
-
-  return { soma, contagem, suporte, resistencia, vies };
-}
-
-function celulaLeitura(quantidadeRegioes, travas) {
-  if (quantidadeRegioes === 0) return "—";
-  return `${travas} trava${travas === 1 ? "" : "s"} <span class="detalhe-leve">(${quantidadeRegioes} ${quantidadeRegioes === 1 ? "região" : "regiões"})</span>`;
 }
 
 // ---- Relatório de performance (estilo "Trade Performance" do NinjaTrader) ----
@@ -367,9 +296,8 @@ function desenharGraficoAcumulado(curva) {
 
 async function atualizar() {
   try {
-    const [precoAtual, regioes, operacoesSimuladas] = await Promise.all([
+    const [precoAtual, operacoesSimuladas] = await Promise.all([
       buscarPrecoAtual(),
-      buscarRegioesMercado(),
       buscarOperacoesSimuladas(),
     ]);
 
@@ -381,26 +309,6 @@ async function atualizar() {
 
     elementoPrecoValor.textContent = formatarPreco(precoAtual.preco);
     elementoPrecoHorario.textContent = precoAtual.horario.slice(0, 8);
-
-    const regioesConfirmadas = regioes.filter((r) => r.quantidade_travas >= MINIMO_TRAVAS_CONFIRMADA);
-    const regioesClassificadas = classificarRegioes(regioesConfirmadas, precoAtual.preco);
-
-    const leitura = calcularLeituraDirecional(regioesClassificadas);
-    elementoLeituraCompraAbaixo.innerHTML = celulaLeitura(leitura.contagem.compraAbaixo, leitura.soma.compraAbaixo);
-    elementoLeituraVendaAbaixo.innerHTML = celulaLeitura(leitura.contagem.vendaAbaixo, leitura.soma.vendaAbaixo);
-    elementoLeituraCompraAcima.innerHTML = celulaLeitura(leitura.contagem.compraAcima, leitura.soma.compraAcima);
-    elementoLeituraVendaAcima.innerHTML = celulaLeitura(leitura.contagem.vendaAcima, leitura.soma.vendaAcima);
-
-    elementoViesValor.textContent = leitura.vies.toUpperCase();
-    elementoViesValor.className = "hero-vies-valor " + leitura.vies;
-
-    const textosConclusao = {
-      alta: `Estrutura de ALTA — suporte (${leitura.suporte} travas de compra abaixo) mais forte que a resistência (${leitura.resistencia} travas de venda acima).`,
-      baixa: `Estrutura de BAIXA — resistência (${leitura.resistencia} travas de venda acima) mais forte que o suporte (${leitura.suporte} travas de compra abaixo).`,
-      neutro: `Neutro — suporte (${leitura.suporte}) e resistência (${leitura.resistencia}) equilibrados, ou nenhuma região relevante nos dois lados.`,
-    };
-    elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
-    elementoLeituraConclusao.className = "leitura-conclusao " + leitura.vies;
 
     if (primeiraCarga) {
       operacoesSimuladas.forEach((o) => idsOperacoesVistas.add(o.id));
