@@ -7,6 +7,10 @@ const LIMITE_ISOLADAS_EXIBIDAS = 20;
 // tabelas principais/leitura direcional com 2+ travas -- o backend agora publica TUDO
 // (inclusive 1 trava só), e é aqui no site que a gente separa confirmada de isolada.
 const MINIMO_TRAVAS_CONFIRMADA = 2;
+// Mesmo valor de FORCA_MINIMA_NOTIFICACAO_PADRAO no servidor.py -- abaixo disso o Telegram
+// NÃO manda o alerta "PADRÃO IDENTIFICADO" (mas o site continua mostrando, só marcado como
+// "fraco", já que lê o log de forma independente e sem esse filtro).
+const FORCA_MINIMA_NOTIFICACAO = 1;
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -109,7 +113,7 @@ async function buscarNivelAguardando() {
   // pega sempre a mais recente, não uma qualquer.
   const { data, error } = await supabaseCliente
     .from("niveis_aguardando_3_tentativa")
-    .select("id_oferta,nivel_preco,operacao")
+    .select("id_oferta,nivel_preco,operacao,forca")
     .eq("ativo", true)
     .order("atualizado_em", { ascending: false })
     .limit(1);
@@ -120,11 +124,17 @@ async function buscarNivelAguardando() {
 async function buscarPadroesRecentes() {
   const { data, error } = await supabaseCliente
     .from("padroes_1_2_tentativa")
-    .select("id,horario_segunda,regiao_preco,operacao")
+    .select("id,horario_segunda,regiao_preco,operacao,forca")
     .order("horario_segunda", { ascending: false })
     .limit(LIMITE_PADROES_EXIBIDOS);
   if (error) throw error;
   return data;
+}
+
+function tagFraco(forca) {
+  return forca < FORCA_MINIMA_NOTIFICACAO
+    ? ' <span class="tag-fraco" title="Força da trava abaixo do mínimo -- o Telegram não notificou esse padrão">fraco</span>'
+    : "";
 }
 
 function formatarPreco(preco) {
@@ -282,7 +292,7 @@ async function atualizar() {
       elementoPainelAguardando.className = "painel-aguardando " + nivelAguardando.operacao;
       elementoConteudoAguardando.innerHTML =
         `<span class="tag-operacao ${nivelAguardando.operacao}">${nivelAguardando.operacao}</span> ` +
-        `nível ${formatarPreco(nivelAguardando.nivel_preco)}`;
+        `nível ${formatarPreco(nivelAguardando.nivel_preco)}${tagFraco(nivelAguardando.forca)}`;
     } else {
       elementoPainelAguardando.hidden = true;
     }
@@ -307,7 +317,7 @@ async function atualizar() {
       ? padroes.map((p) => `
         <tr>
           <td>${p.horario_segunda.slice(0, 8)}</td>
-          <td><span class="tag-operacao ${p.operacao}">${p.operacao}</span></td>
+          <td><span class="tag-operacao ${p.operacao}">${p.operacao}</span>${tagFraco(p.forca)}</td>
           <td>${formatarPreco(p.regiao_preco)}</td>
         </tr>
       `).join("")

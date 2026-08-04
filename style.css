@@ -272,6 +272,18 @@ tbody tr:hover td {
 .tag-operacao.compra { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
 .tag-operacao.venda { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
 
+.tag-fraco {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(209, 154, 61, 0.18);
+  color: #d19a3d;
+  margin-left: 4px;
+  cursor: help;
+}
+
 .detalhe-leve {
   color: #666;
   font-size: 12px;
