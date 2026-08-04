@@ -41,15 +41,15 @@ for (const botao of document.querySelectorAll(".aba-botao")) {
 }
 const elementoBotaoSom = document.getElementById("botao-som");
 
-// ---- Áudio (os mesmos .mp3 de voz gravados pelo usuário, usados pelo servidor.py) tocado
-// toda vez que aparece um padrão novo (linha nova em padroes_1_2_tentativa) -- compra e venda
-// tocam arquivos diferentes. Ligado por padrão (o botão agora serve pra MUTAR, não pra
-// ativar) -- mas navegadores só liberam áudio de verdade depois de alguma interação do
-// usuário com a página, então destrava no primeiro clique em QUALQUER lugar, não só no
-// botão (o botão continua funcionando como mute/unmute manual). ----
+// ---- Áudio (mesmo .mp3 de voz gravado pelo usuário, usado pelo servidor.py) tocado toda vez
+// que um nível novo fica "aguardando 3ª tentativa". Ligado por padrão (o botão agora serve pra
+// MUTAR, não pra ativar) -- mas navegadores só liberam áudio de verdade depois de alguma
+// interação do usuário com a página, então destrava no primeiro clique em QUALQUER lugar, não
+// só no botão (o botão continua funcionando como mute/unmute manual).
+// Os áudios "compradores travando"/"vendedores travando" NÃO tocam mais aqui -- esse par foi
+// realocado (2026-08-04) pro analisador_tentativas_pequenas.py, que os dispara pro padrão de
+// times pequenos (<= 3 contratos), não pra este site (que só lê o times filtrado >= 3). ----
 let somAtivado = true;
-const audioCompra = new Audio("sons/compradores_travando.mp3");
-const audioVenda = new Audio("sons/vendedores_travando.mp3");
 const audioPadraoIdentificado = new Audio("sons/segunda_trava_validada.mp3");
 
 elementoBotaoSom.textContent = "🔔 Som ativado";
@@ -59,9 +59,7 @@ let audioDestravado = false;
 function destravarAudio() {
   if (audioDestravado) return;
   audioDestravado = true;
-  for (const audio of [audioCompra, audioVenda, audioPadraoIdentificado]) {
-    audio.play().then(() => audio.pause()).catch(() => {});
-  }
+  audioPadraoIdentificado.play().then(() => audioPadraoIdentificado.pause()).catch(() => {});
 }
 document.addEventListener("click", destravarAudio, { once: true });
 
@@ -69,27 +67,13 @@ elementoBotaoSom.addEventListener("click", () => {
   somAtivado = !somAtivado;
   elementoBotaoSom.textContent = somAtivado ? "🔔 Som ativado" : "🔕 Som mutado";
   elementoBotaoSom.classList.toggle("ativo", somAtivado);
-  if (somAtivado) {
-    tocarBlip("compra"); // feedback imediato de que o som funciona
-  }
 });
-
-function tocarBlip(operacao) {
-  if (!somAtivado) return;
-  const audio = operacao === "compra" ? audioCompra : audioVenda;
-  audio.currentTime = 0;
-  audio.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
-}
 
 function tocarAudioPadraoIdentificado() {
   if (!somAtivado) return;
   audioPadraoIdentificado.currentTime = 0;
   audioPadraoIdentificado.play().catch((erro) => console.warn("Não foi possível tocar o áudio:", erro));
 }
-
-// ids de padrões já vistos -- na primeira carga só registra (não bipa o histórico do dia
-// inteiro), da segunda em diante bipa quando aparece um id novo.
-let idsPadroesVistos = null;
 
 // id_oferta do nível "aguardando 3ª tentativa" ativo visto por último -- na primeira carga só
 // registra, depois toca o áudio quando um nível NOVO fica ativo (não repete a cada 3s
@@ -339,19 +323,6 @@ async function atualizar() {
       `).join("")
       : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
 
-    if (idsPadroesVistos === null) {
-      // primeira carga da página: só registra o que já existe, não bipa o histórico do dia.
-      idsPadroesVistos = new Set(padroes.map((p) => p.id));
-    } else {
-      // padroes vem ordenado por criado_em desc, então o primeiro não visto é o mais recente
-      // -- usa a operação dele pra escolher qual áudio tocar. Só marca como "visto" quando o
-      // som REALMENTE tocar -- fica pendente se o som ainda estiver desligado.
-      const padraoNovo = padroes.find((p) => !idsPadroesVistos.has(p.id));
-      if (padraoNovo && somAtivado) {
-        tocarBlip(padraoNovo.operacao);
-        idsPadroesVistos = new Set(padroes.map((p) => p.id));
-      }
-    }
 
     elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
