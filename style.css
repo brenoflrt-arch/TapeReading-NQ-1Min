@@ -326,3 +326,16 @@ tbody tr:hover td {
   color: #666;
   font-size: 12px;
 }
+
+.tag-resultado {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tag-resultado.aberta { background: rgba(209, 154, 61, 0.18); color: #d19a3d; }
+.tag-resultado.lucro { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
+.tag-resultado.prejuizo { background: rgba(239, 83, 80, 0.18); color: #ef5350; }

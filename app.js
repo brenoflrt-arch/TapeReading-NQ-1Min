@@ -28,6 +28,8 @@ const elementoCorpoTabelaCompra = document.getElementById("corpo-tabela-compra")
 const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
 const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
+const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
+const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 20;
 
 // ---- Abas: só troca qual painel fica visível -- os dados continuam sendo buscados e
 // atualizados nos dois em segundo plano, então trocar de aba mostra tudo já atualizado. ----
@@ -129,6 +131,18 @@ async function buscarPadroesRecentes() {
   return data;
 }
 
+async function buscarOperacoesSimuladas() {
+  // Vem do analisador_tentativas_pequenas.py (times filtrado <= 3 contratos, rodando local,
+  // separado do servidor.py) -- criado_em é timestamptz de verdade, ordena certo entre dias.
+  const { data, error } = await supabaseCliente
+    .from("operacoes_simuladas_pequenas")
+    .select("id,operacao,preco_entrada,forca,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
+    .order("criado_em", { ascending: false })
+    .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+  if (error) throw error;
+  return data;
+}
+
 function tagFraco(forca) {
   return forca < FORCA_MINIMA_NOTIFICACAO
     ? ' <span class="tag-fraco" title="Força da trava abaixo do mínimo -- o Telegram não notificou esse padrão">fraco</span>'
@@ -194,6 +208,12 @@ function celulaLeitura(quantidadeRegioes, travas) {
   return `${travas} trava${travas === 1 ? "" : "s"} <span class="detalhe-leve">(${quantidadeRegioes} região${quantidadeRegioes === 1 ? "" : "ões"})</span>`;
 }
 
+function celulaResultado(op) {
+  if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
+  const classe = op.status === "gain" ? "lucro" : "prejuizo";
+  return `<span class="tag-resultado ${classe}">${op.resultado} (${op.resultado_pontos > 0 ? "+" : ""}${op.resultado_pontos} pts)</span>`;
+}
+
 function linhaTabelaRegiao(r) {
   const distanciaTexto = r.posicao === "dentro" ? "dentro agora" : `${r.distancia.toFixed(2)} pts ${r.posicao}`;
   const horario = r.ultima_trava_em ? r.ultima_trava_em.slice(0, 8) : "—";
@@ -209,11 +229,12 @@ function linhaTabelaRegiao(r) {
 
 async function atualizar() {
   try {
-    const [precoAtual, regioes, nivelAguardando, padroes] = await Promise.all([
+    const [precoAtual, regioes, nivelAguardando, padroes, operacoesSimuladas] = await Promise.all([
       buscarPrecoAtual(),
       buscarRegioesMercado(),
       buscarNivelAguardando(),
       buscarPadroesRecentes(),
+      buscarOperacoesSimuladas(),
     ]);
 
     if (!precoAtual) {
@@ -323,6 +344,18 @@ async function atualizar() {
       `).join("")
       : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
 
+    elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesSimuladas.length
+      ? operacoesSimuladas.map((o) => `
+        <tr>
+          <td>${o.horario_entrada.slice(0, 8)}</td>
+          <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
+          <td>${formatarPreco(o.preco_entrada)}</td>
+          <td>${o.forca.toFixed(1)}</td>
+          <td>${celulaResultado(o)}</td>
+          <td class="detalhe-leve">${o.observacao || "—"}</td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="6" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
     elementoStatus.textContent = `ao vivo — ${regioesConfirmadas.length} regiões, ${regioesIsoladas.length} isoladas, ${padroes.length} padrões (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
