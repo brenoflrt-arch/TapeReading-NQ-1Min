@@ -32,7 +32,8 @@ const elementoCorpoTabelaVenda = document.getElementById("corpo-tabela-venda");
 const elementoCorpoTabelaPadroes = document.getElementById("corpo-tabela-padroes");
 const elementoCorpoTabelaIsoladas = document.getElementById("corpo-tabela-isoladas");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
-const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 20;
+const elementoCorpoTabelaBacktests = document.getElementById("corpo-tabela-backtests");
+const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
 const elementoResumoOperacoes = document.getElementById("resumo-operacoes");
 const elementoResumoAcerto = document.getElementById("resumo-acerto");
 const elementoResumoFinanceiro = document.getElementById("resumo-financeiro");
@@ -139,6 +140,17 @@ async function buscarPadroesRecentes() {
     .select("id,horario_segunda,regiao_preco,operacao,forca")
     .order("criado_em", { ascending: false })
     .limit(LIMITE_PADROES_EXIBIDOS);
+  if (error) throw error;
+  return data;
+}
+
+async function buscarBacktestsCalibracao() {
+  // Histórico do backtest_regiao_referencia.py -- registrado manualmente a cada rodada de
+  // calibração (não é gerado automaticamente pelo analisador ao vivo).
+  const { data, error } = await supabaseCliente
+    .from("backtests_calibracao")
+    .select("data,descricao,parametros,operacoes,gain,stop,taxa_acerto,resultado_pontos,resultado_dolar_2mnq,criado_em")
+    .order("criado_em", { ascending: true });
   if (error) throw error;
   return data;
 }
@@ -311,12 +323,13 @@ function linhaTabelaRegiao(r) {
 
 async function atualizar() {
   try {
-    const [precoAtual, regioes, nivelAguardando, padroes, operacoesSimuladas] = await Promise.all([
+    const [precoAtual, regioes, nivelAguardando, padroes, operacoesSimuladas, backtests] = await Promise.all([
       buscarPrecoAtual(),
       buscarRegioesMercado(),
       buscarNivelAguardando(),
       buscarPadroesRecentes(),
       buscarOperacoesSimuladas(),
+      buscarBacktestsCalibracao(),
     ]);
 
     if (!precoAtual) {
@@ -425,6 +438,18 @@ async function atualizar() {
         </tr>
       `).join("")
       : '<tr><td colspan="3" class="linha-vazia">nenhum padrão confirmado ainda</td></tr>';
+
+    elementoCorpoTabelaBacktests.innerHTML = backtests.length
+      ? backtests.map((b) => `
+        <tr>
+          <td>${b.data}</td>
+          <td>${b.descricao}<div class="detalhe-leve">${b.parametros}</div></td>
+          <td>${b.operacoes} <span class="detalhe-leve">(${b.gain}g/${b.stop}s)</span></td>
+          <td>${b.taxa_acerto.toFixed(1)}%</td>
+          <td>${b.resultado_pontos > 0 ? "+" : ""}${b.resultado_pontos} pts <span class="detalhe-leve">(${formatarDolar(b.resultado_dolar_2mnq)})</span></td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="5" class="linha-vazia">nenhum backtest registrado ainda</td></tr>';
 
     atualizarPerformance(operacoesSimuladas);
 
