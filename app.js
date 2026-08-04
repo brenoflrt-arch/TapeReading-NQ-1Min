@@ -137,6 +137,7 @@ async function buscarOperacoesSimuladas() {
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
     .select("id,operacao,preco_entrada,forca,status,resultado,resultado_pontos,observacao,horario_entrada,horario_resultado,criado_em")
+    .neq("status", "cancelada") // trava superada por uma melhor do mesmo lado -- não interessa aqui
     .order("criado_em", { ascending: false })
     .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
   if (error) throw error;
