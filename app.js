@@ -101,7 +101,7 @@ async function buscarPrecoAtual() {
 async function buscarRegioesMercado() {
   const { data, error } = await supabaseCliente
     .from("regioes_mercado")
-    .select("id,operacao,minima,maxima,quantidade_travas,ultima_trava_em");
+    .select("id,operacao,minima,maxima,quantidade_travas,ultima_trava_em,atualizado_em");
   if (error) throw error;
   return data;
 }
@@ -122,10 +122,13 @@ async function buscarNivelAguardando() {
 }
 
 async function buscarPadroesRecentes() {
+  // Ordena por criado_em (timestamptz de verdade, com data), NÃO por horario_segunda (só
+  // "HH:MM:SS", sem data) -- senão um padrão de 23h de ontem parece "mais recente" que um de
+  // 06h de hoje, já que "23" > "06" como texto puro.
   const { data, error } = await supabaseCliente
     .from("padroes_1_2_tentativa")
     .select("id,horario_segunda,regiao_preco,operacao,forca")
-    .order("horario_segunda", { ascending: false })
+    .order("criado_em", { ascending: false })
     .limit(LIMITE_PADROES_EXIBIDOS);
   if (error) throw error;
   return data;
@@ -259,11 +262,13 @@ async function atualizar() {
     elementoLeituraConclusao.textContent = textosConclusao[leitura.vies];
     elementoLeituraConclusao.className = "leitura-conclusao " + leitura.vies;
 
-    // Ordena pela última trava (mais recente primeiro) -- a "distância" continua calculada e
-    // mostrada na coluna, só não é mais o critério de ordem das linhas.
-    const porUltimaTravaDesc = (a, b) => (b.ultima_trava_em || "").localeCompare(a.ultima_trava_em || "");
-    const regioesCompra = regioesClassificadas.filter((r) => r.operacao === "compra").sort(porUltimaTravaDesc);
-    const regioesVenda = regioesClassificadas.filter((r) => r.operacao === "venda").sort(porUltimaTravaDesc);
+    // Ordena por atualizado_em (timestamptz de verdade, com data) -- NÃO por ultima_trava_em
+    // (só "HH:MM:SS", sem data), pelo mesmo motivo do buscarPadroesRecentes: senão uma trava
+    // de 23h de ontem parece "mais recente" que uma de 06h de hoje. A "distância" continua
+    // calculada e mostrada na coluna, só não é mais o critério de ordem das linhas.
+    const porAtualizadoDesc = (a, b) => (b.atualizado_em || "").localeCompare(a.atualizado_em || "");
+    const regioesCompra = regioesClassificadas.filter((r) => r.operacao === "compra").sort(porAtualizadoDesc);
+    const regioesVenda = regioesClassificadas.filter((r) => r.operacao === "venda").sort(porAtualizadoDesc);
 
     elementoCorpoTabelaCompra.innerHTML = regioesCompra.length
       ? regioesCompra.map(linhaTabelaRegiao).join("")
@@ -274,7 +279,7 @@ async function atualizar() {
       : '<tr><td colspan="4" class="linha-vazia">sem regiões</td></tr>';
 
     const isoladasRecentes = [...regioesIsoladas]
-      .sort((a, b) => (b.ultima_trava_em || "").localeCompare(a.ultima_trava_em || ""))
+      .sort(porAtualizadoDesc)
       .slice(0, LIMITE_ISOLADAS_EXIBIDAS);
 
     elementoCorpoTabelaIsoladas.innerHTML = isoladasRecentes.length
@@ -327,9 +332,9 @@ async function atualizar() {
       // primeira carga da página: só registra o que já existe, não bipa o histórico do dia.
       idsPadroesVistos = new Set(padroes.map((p) => p.id));
     } else {
-      // padroes vem ordenado por horario_segunda desc, então o primeiro não visto é o mais
-      // recente -- usa a operação dele pra escolher qual áudio tocar. Só marca como "visto"
-      // quando o som REALMENTE tocar -- fica pendente se o som ainda estiver desligado.
+      // padroes vem ordenado por criado_em desc, então o primeiro não visto é o mais recente
+      // -- usa a operação dele pra escolher qual áudio tocar. Só marca como "visto" quando o
+      // som REALMENTE tocar -- fica pendente se o som ainda estiver desligado.
       const padraoNovo = padroes.find((p) => !idsPadroesVistos.has(p.id));
       if (padraoNovo && somAtivado) {
         tocarBlip(padraoNovo.operacao);
