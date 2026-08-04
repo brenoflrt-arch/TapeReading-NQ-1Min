@@ -210,6 +210,7 @@ function celulaLeitura(quantidadeRegioes, travas) {
 
 function celulaResultado(op) {
   if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
+  if (op.status === "cancelada") return '<span class="tag-resultado cancelada">cancelada</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
   return `<span class="tag-resultado ${classe}">${op.resultado} (${op.resultado_pontos > 0 ? "+" : ""}${op.resultado_pontos} pts)</span>`;
 }

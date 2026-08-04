@@ -337,5 +337,6 @@ tbody tr:hover td {
 }
 
 .tag-resultado.aberta { background: rgba(209, 154, 61, 0.18); color: #d19a3d; }
+.tag-resultado.cancelada { background: rgba(120, 120, 120, 0.18); color: #888; }
 .tag-resultado.lucro { background: rgba(38, 166, 154, 0.18); color: #26a69a; }
 .tag-resultado.prejuizo { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
