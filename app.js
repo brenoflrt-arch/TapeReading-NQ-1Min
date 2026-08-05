@@ -80,6 +80,8 @@ const elementoPerf = {
   prejuizoBruto: document.getElementById("perf-prejuizo-bruto"),
   operacoes: document.getElementById("perf-operacoes"),
   vencedoras: document.getElementById("perf-vencedoras"),
+  operacoesPositivas: document.getElementById("perf-operacoes-positivas"),
+  operacoesNegativas: document.getElementById("perf-operacoes-negativas"),
   custos: document.getElementById("perf-custos"),
 };
 const elementoGraficoPatrimonio = document.getElementById("grafico-patrimonio");
@@ -234,6 +236,8 @@ function calcularResumoPerformance(resolvidas) {
     lucroBruto: somar(valoresGain),
     prejuizoBruto: somar(valoresStop),
     numOperacoes: resolvidas.length,
+    numOperacoesPositivas: gains.length,
+    numOperacoesNegativas: stops.length,
     taxaVencedoras: resolvidas.length ? (gains.length / resolvidas.length) * 100 : 0,
     custos,
   };
@@ -247,6 +251,10 @@ function preencherTiraPerformance(resumo) {
   el.prejuizoBruto.textContent = formatarDolar(resumo.prejuizoBruto);
   el.operacoes.textContent = resumo.numOperacoes;
   el.vencedoras.textContent = `${resumo.taxaVencedoras.toFixed(2)}%`;
+  el.operacoesPositivas.textContent = resumo.numOperacoesPositivas;
+  el.operacoesPositivas.className = "tira-valor positivo";
+  el.operacoesNegativas.textContent = resumo.numOperacoesNegativas;
+  el.operacoesNegativas.className = "tira-valor negativo";
   el.custos.textContent = formatarDolar(resumo.custos);
 }
 
