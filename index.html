@@ -64,15 +64,26 @@
 
   <section class="cartao">
     <h2>Operações</h2>
-    <div class="tabela-rolavel">
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Nível análise</th><th>Nível entrada</th><th>Negócios</th><th>Resultado análise</th><th>Resultado entrada</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-operacoes-simuladas">
-          <tr><td colspan="7" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
-        </tbody>
-      </table>
+    <div class="protegido" id="protegido-operacoes" data-bloqueado="true">
+      <div class="tabela-rolavel">
+        <table class="tabela-padroes">
+          <thead>
+            <tr><th>Horário</th><th>Operação</th><th>Nível análise</th><th>Nível entrada</th><th>Negócios</th><th>Resultado análise</th><th>Resultado entrada</th></tr>
+          </thead>
+          <tbody id="corpo-tabela-operacoes-simuladas">
+            <tr><td colspan="7" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bloqueio-login" id="bloqueio-login">
+        <form id="form-login" class="form-login">
+          <span class="bloqueio-titulo">Área restrita</span>
+          <input type="email" id="login-email" placeholder="e-mail" autocomplete="username" required />
+          <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" required />
+          <button type="submit">Entrar</button>
+          <span class="bloqueio-erro" id="bloqueio-erro"></span>
+        </form>
+      </div>
     </div>
   </section>
 </main>

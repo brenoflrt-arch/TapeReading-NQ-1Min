@@ -13,6 +13,37 @@ const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tab
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 const elementoBotaoSom = document.getElementById("botao-som");
 
+// ---- Área restrita (tabela de operações fica borrada até logar, pedido de 2026-08-04) --
+// mesmo login (Supabase Auth) já usado na "Área restrita" do painel MNPK, mesmo projeto
+// Supabase -- a sessão persiste sozinha (supabase-js guarda em localStorage), então só pede
+// login de novo se a sessão expirar ou o usuário nunca tiver logado nesse navegador.
+const elementoProtegidoOperacoes = document.getElementById("protegido-operacoes");
+const elementoFormLogin = document.getElementById("form-login");
+const elementoLoginEmail = document.getElementById("login-email");
+const elementoLoginSenha = document.getElementById("login-senha");
+const elementoBloqueioErro = document.getElementById("bloqueio-erro");
+
+function atualizarBloqueio(sessao) {
+  elementoProtegidoOperacoes.dataset.bloqueado = sessao ? "false" : "true";
+}
+
+supabaseCliente.auth.getSession().then(({ data }) => atualizarBloqueio(data.session));
+supabaseCliente.auth.onAuthStateChange((_evento, sessao) => atualizarBloqueio(sessao));
+
+elementoFormLogin.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  elementoBloqueioErro.textContent = "";
+  const { error } = await supabaseCliente.auth.signInWithPassword({
+    email: elementoLoginEmail.value,
+    password: elementoLoginSenha.value,
+  });
+  if (error) {
+    elementoBloqueioErro.textContent = "E-mail ou senha inválidos.";
+    return;
+  }
+  elementoLoginSenha.value = "";
+});
+
 // ---- Áudio: toca quando uma operação NOVA é validada (mesmo momento do áudio "compradores/
 // vendedores travando" do analisador_tentativas_pequenas.py, que é a estrategia real em
 // producao) -- navegador exige um clique antes de liberar autoplay, daí o botão "Ativar som".
