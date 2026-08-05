@@ -254,8 +254,11 @@ function desenharGraficoPatrimonio(curva) {
   const altura = 340;
   const margemDireita = 70;
   const margemBaixo = 24;
+  // Pedido de 2026-08-05: sem margem em cima, o rótulo do valor máximo (bem no topo do
+  // gráfico) ficava colado na borda do SVG e cortava a metade de cima do texto.
+  const margemCima = 16;
   const larguraUtil = largura - margemDireita;
-  const alturaUtil = altura - margemBaixo;
+  const alturaUtil = altura - margemBaixo - margemCima;
 
   if (curva.length === 0) {
     elementoGraficoPatrimonio.innerHTML = `
@@ -269,7 +272,7 @@ function desenharGraficoPatrimonio(curva) {
   const minimo = Math.min(0, ...valores);
   const maximo = Math.max(0, ...valores);
   const amplitude = (maximo - minimo) || 1;
-  const paraY = (v) => alturaUtil - ((v - minimo) / amplitude) * alturaUtil;
+  const paraY = (v) => margemCima + alturaUtil - ((v - minimo) / amplitude) * alturaUtil;
   const yZero = paraY(0);
 
   const tempoInicio = curva[0].data.getTime();
@@ -304,17 +307,17 @@ function desenharGraficoPatrimonio(curva) {
   const caminhoLinha = pontos.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const caminhoArea = `${caminhoLinha} L${pontos[pontos.length - 1].x.toFixed(1)},${yZero.toFixed(1)} L0,${yZero.toFixed(1)} Z`;
 
-  const fracaoZero = Math.max(0, Math.min(1, yZero / alturaUtil));
+  const fracaoZero = Math.max(0, Math.min(1, (yZero - margemCima) / alturaUtil));
 
   elementoGraficoPatrimonio.innerHTML = `
     <defs>
-      <linearGradient id="areaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${alturaUtil}">
+      <linearGradient id="areaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
         <stop offset="0" stop-color="#15803d" stop-opacity="0.5" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#15803d" stop-opacity="0.03" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" stop-opacity="0.03" />
         <stop offset="1" stop-color="#ef5350" stop-opacity="0.5" />
       </linearGradient>
-      <linearGradient id="linhaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${alturaUtil}">
+      <linearGradient id="linhaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
         <stop offset="0" stop-color="#22c55e" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#22c55e" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" />
