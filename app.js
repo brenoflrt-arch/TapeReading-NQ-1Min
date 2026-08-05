@@ -200,19 +200,32 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
+/** Resultado "de verdade" de uma operação -- prioriza o preenchimento REAL do Ninja
+ *  (resultado_real) sempre que ele existe; só cai pro Resultado Análise (nível teórico) nas
+ *  operações que o Ninja nunca chegou a preencher (preco_real_entrada null). Corrigido em
+ *  2026-08-05: o resumo de performance somava só o status (Resultado Análise), que às vezes dá
+ *  "lucro" num caso que a execução real deu prejuízo de verdade (preço real de entrada pior que
+ *  o nível calculado) -- o card ficava mostrando um resultado mais otimista que a conta real. */
+function resultadoEfetivo(o) {
+  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
+  return o.resultado;
+}
+
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
  *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
 function calcularResumoPerformance(resolvidas) {
-  const gains = resolvidas.filter((o) => o.status === "gain");
-  const stops = resolvidas.filter((o) => o.status === "stop");
-  const valoresGain = gains.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
-  const valoresStop = stops.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
+  const comResultado = resolvidas.map((o) => ({ o, resultado: resultadoEfetivo(o) }));
+  const gains = comResultado.filter((x) => x.resultado === "lucro");
+  const stops = comResultado.filter((x) => x.resultado === "prejuizo");
+  const valoresGain = gains.map(() => DOLAR_POR_PONTO_OPERACAO * 20);
+  const valoresStop = stops.map(() => -DOLAR_POR_PONTO_OPERACAO * 20);
   const custos = resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO;
 
   let acumulado = 0;
-  const curva = resolvidas.map((o) => {
-    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO - CUSTO_CORRETAGEM_POR_CONTRATO;
-    return { valor: acumulado, data: new Date(o.criado_em), status: o.status };
+  const curva = comResultado.map(({ o, resultado }) => {
+    const pontos = resultado === "lucro" ? 20 : -20;
+    acumulado += pontos * DOLAR_POR_PONTO_OPERACAO - CUSTO_CORRETAGEM_POR_CONTRATO;
+    return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
   return {
