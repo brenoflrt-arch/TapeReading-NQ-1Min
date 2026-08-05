@@ -143,7 +143,7 @@ function formatarPreco(preco) {
 
 function formatarDolar(valor) {
   const sinal = valor > 0 ? "+" : valor < 0 ? "-" : "";
-  return `${sinal}U$ ${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sinal}${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
 }
 
 // Resultado ANÁLISE: baseado no nível calculado (nível médio/referência), stop/alvo de
@@ -252,7 +252,9 @@ function preencherTiraPerformance(resumo) {
   el.resultadoTotal.textContent = formatarDolar(resumo.resultadoTotal);
   el.resultadoTotal.className = "tira-valor " + (resumo.resultadoTotal >= 0 ? "positivo" : "negativo");
   el.lucroBruto.textContent = formatarDolar(resumo.lucroBruto);
+  el.lucroBruto.className = "tira-valor positivo";
   el.prejuizoBruto.textContent = formatarDolar(resumo.prejuizoBruto);
+  el.prejuizoBruto.className = "tira-valor negativo";
   el.operacoes.textContent = resumo.numOperacoes;
   el.vencedoras.textContent = `${resumo.taxaVencedoras.toFixed(2)}%`;
   el.operacoesPositivas.textContent = resumo.numOperacoesPositivas;
