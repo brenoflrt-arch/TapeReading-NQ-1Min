@@ -241,14 +241,18 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-/** Resultado "de verdade" de uma operação -- pedido de 2026-08-05 (4ª vez): a partir de agora o
- *  resumo/gráfico e a tabela "Operações" contam só o Resultado Ordem Limite (não mais Resultado
- *  Análise nem Resultado Entrada, que passaram a confundir por discordarem entre si). A lista
- *  `resolvidas` já vem filtrada só pra linhas com resultado_ordem_limite resolvido -- ver
- *  atualizar() -- então aqui é direto, sem fallback. Não muda o histórico: resultado_ordem_limite
- *  já era calculado antes, só passou a ser o campo que decide o resumo. */
+/** Resultado "de verdade" de uma operação -- revertido em 2026-08-05 (5ª vez) de volta pra
+ *  fórmula aprovada: prioriza Resultado Ordem Limite quando existe e preencheu, cai pro
+ *  Resultado Entrada (resultado_real) sem ordem limite, só cai pro Resultado Análise como último
+ *  recurso. O resumo/gráfico do topo usa ISSO pra TODO o histórico -- não muda mais daqui. A
+ *  tabela "Operações" (separada da "Registros") é só uma lista adicional, não influencia essa
+ *  conta. */
 function resultadoEfetivo(o) {
-  return o.resultado_ordem_limite;
+  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
+    return o.resultado_ordem_limite;
+  }
+  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
+  return o.resultado;
 }
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
@@ -429,8 +433,11 @@ async function atualizar() {
     // passaria_filtro_3min null = operação de antes dessa coluna existir (quando o filtro ainda
     // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
     // antigo quando o filtro simulado está selecionado.
+    //
+    // Resumo/gráfico do topo: fórmula aprovada, sem mudar -- resultadoEfetivo (ordem limite ->
+    // entrada -> análise) em cima de TODAS as operações com Resultado Análise resolvido.
     const resolvidas = [...operacoesSimuladas]
-      .filter((o) => o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo")
+      .filter((o) => o.status === "gain" || o.status === "stop")
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
@@ -438,10 +445,14 @@ async function atualizar() {
     preencherTiraPerformance(resumo);
     desenharGraficoPatrimonio(resumo.curva);
 
-    // Tabela nova "Operações" (pedido de 2026-08-05): só Horário/Operação/Nível entrada/
-    // Negócios/Resultado Ordem Limite -- só entram aqui as que já preencheram de verdade nesse
-    // modelo (lucro/prejuízo), não as "nao_preenchida" nem as ainda em aberto.
-    const operacoesRegistradas = resolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    // Tabela nova "Operações" (lista separada, não influencia o resumo acima): só
+    // Horário/Operação/Nível entrada/Negócios/Resultado Ordem Limite -- só entram aqui as que já
+    // preencheram de verdade nesse modelo (lucro/prejuízo), não as "nao_preenchida" nem as ainda
+    // em aberto.
+    const operacoesOrdemLimiteResolvidas = [...operacoesSimuladas]
+      .filter((o) => o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo")
+      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    const operacoesRegistradas = operacoesOrdemLimiteResolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoes.innerHTML = operacoesRegistradas.length
       ? operacoesRegistradas.map((o) => `
         <tr>
