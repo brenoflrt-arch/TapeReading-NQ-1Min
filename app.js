@@ -81,6 +81,7 @@ const elementosRelatorio = {
   tempoMaior: document.getElementById("rel-tempo-maior"),
   taxaAcerto: document.getElementById("rel-taxa-acerto"),
   expectativa: document.getElementById("rel-expectativa"),
+  corretagemTotal: document.getElementById("rel-corretagem-total"),
   lucroTotal: document.getElementById("rel-lucro-total"),
   numGain: document.getElementById("rel-num-gain"),
   maiorGain: document.getElementById("rel-maior-gain"),
@@ -261,6 +262,7 @@ function calcularEstatisticas(resolvidas) {
     // P/L líquido = bruto - corretagem (custo por contrato x total de operações, cada uma
     // negocia 1 contrato) -- pedido de 2026-08-05.
     plBruto: somar(valores) - resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO,
+    corretagemTotal: resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO,
     numOperacoes: resolvidas.length,
     tempoMedio: media(duracoesTodas),
     tempoMaior: duracoesTodas.length ? Math.max(...duracoesTodas) : 0,
@@ -294,6 +296,7 @@ function preencherRelatorio(est) {
   el.tempoMaior.textContent = formatarDuracao(est.tempoMaior);
   el.taxaAcerto.textContent = `${est.taxaAcerto.toFixed(1)}%`;
   el.expectativa.textContent = formatarDolar(est.expectativa);
+  el.corretagemTotal.textContent = formatarDolar(est.corretagemTotal);
 
   el.lucroTotal.textContent = formatarDolar(est.lucroTotal);
   el.numGain.textContent = est.numGain;
