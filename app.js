@@ -113,19 +113,21 @@ async function buscarOperacoesSimuladas() {
   // de TODAS as operações do dia, não só as mais recentes -- a tabela na tela é que corta pra
   // LIMITE_OPERACOES_SIMULADAS_EXIBIDAS.
   //
-  // NÃO ordena por criado_em aqui (bug encontrado em 2026-08-04): criado_em é quando a linha foi
-  // GRAVADA no Supabase, e um reinício do analisador replaya o log inteiro em silêncio -- uma
-  // operação de horário de mercado mais cedo (ex.: 16:53) pode ser gravada bem DEPOIS (ex.: só
-  // no restart das 18:18) de uma operação de horário mais tarde (17:45) que já tinha sido gravada
-  // antes. horario_entrada é o horário real do mercado, então é isso que ordena certo -- feito no
-  // JS (não dá pra `.order()` no Supabase por um campo texto com semântica de horário-do-dia sem
-  // reordenar errado entre dias, mas como não há filtro de data aqui mesmo, isso já valia antes).
+  // Ordena por criado_em (timestamp de verdade, com data) -- pedido de 2026-08-04 era usar
+  // horario_entrada (texto "HH:MM:SS", sem data) pra não sofrer com o replay de um restart
+  // regravando uma operação antiga bem depois. Mas horario_entrada quebra de um jeito pior e mais
+  // frequente: sem data, "04:28" (hoje) ordena ANTES de "23:36" (ontem) como texto, mesmo sendo
+  // depois no tempo real -- bug encontrado em 2026-08-05 assim que a sessão atravessou a meia-
+  // noite (toda operação de madrugada sumia do topo da tabela). criado_em tem data embutida,
+  // então não quebra nisso -- o caso do restart que motivou a troca original é bem mais raro hoje
+  // (o processo já preserva o estado real entre restarts, então a maioria das operações já é
+  // gravada perto da hora real do mercado, não só num replay tardio).
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
     .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_ordem_limite,resultado_pontos,horario_entrada,horario_resultado,criado_em")
-    .not("status", "in", "(cancelada,descartada)"); // ruído de referências que nunca confirmaram -- não interessa aqui
+    .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
+    .order("criado_em", { ascending: false });
   if (error) throw error;
-  data.sort((a, b) => b.horario_entrada.localeCompare(a.horario_entrada));
   return data;
 }
 
@@ -375,7 +377,7 @@ async function atualizar() {
 
     const resolvidas = [...operacoesSimuladas]
       .filter((o) => o.status === "gain" || o.status === "stop")
-      .sort((a, b) => a.horario_entrada.localeCompare(b.horario_entrada));
+      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const est = calcularEstatisticas(resolvidas);
     preencherRelatorio(est);
     desenharGraficoAcumulado(est.curva);
