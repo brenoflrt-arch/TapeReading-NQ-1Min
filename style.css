@@ -224,10 +224,12 @@ main {
 
 /* Toggle Real vs Simulado com filtro 3min (2026-08-05) -- mesma base do aba-periodo, mas cor de
    destaque diferente (azul) pra não confundir com as abas de período (verde), já que são dois
-   filtros independentes agindo ao mesmo tempo. */
+   filtros independentes agindo ao mesmo tempo. Fica dentro da área restrita (Operações), no fim
+   da página -- ver .protegido[data-bloqueado] mais abaixo. */
 .performance-abas-filtro {
   border-bottom: none;
   padding-top: 0;
+  margin-top: 14px;
 }
 
 .aba-filtro {
@@ -357,7 +359,8 @@ tbody tr:hover td {
   position: relative;
 }
 
-.protegido[data-bloqueado="true"] .tabela-rolavel {
+.protegido[data-bloqueado="true"] .tabela-rolavel,
+.protegido[data-bloqueado="true"] .performance-abas-filtro {
   filter: blur(6px);
   pointer-events: none;
   user-select: none;
