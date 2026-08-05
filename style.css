@@ -186,6 +186,13 @@ main {
   color: #d1d4dc;
 }
 
+/* Especificidade maior que ".tira-valor" sozinho -- sem isso, a cor cinza padrão de
+   ".tira-valor" (que vem depois de ".positivo"/".negativo" no arquivo) sempre vencia, mesmo com
+   a classe extra aplicada via JS (bug encontrado em 2026-08-05: Lucro/Prejuízo Bruto e
+   Operações Positivas/Negativas não coloriam). */
+.tira-valor.positivo { color: #15803d; }
+.tira-valor.negativo { color: #ef5350; }
+
 .performance-abas {
   display: flex;
   gap: 4px;
