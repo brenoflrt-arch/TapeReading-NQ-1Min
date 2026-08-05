@@ -185,15 +185,19 @@ function somar(lista) {
 }
 
 /** Só as operações resolvidas dentro do período escolhido nas abas (Diário/Semanal/Mensal/Todo
- *  período) -- "diario" usa o dia calendário da operação mais recente (não "hoje" no relógio do
- *  navegador, pra não zerar o gráfico fora do horário de mercado). */
+ *  período) -- "diario" usa a SESSÃO de mercado (19:00 até 19:00, mesmo corte diurno/noturno do
+ *  resto do sistema -- ver CLAUDE.md), não a meia-noite do calendário. Corrigido em 2026-08-05:
+ *  meia-noite cortava a sessão da noite ao meio, mostrando só metade das operações do dia. Ancora
+ *  na operação mais recente (não "agora" no relógio do navegador), pra não zerar fora do horário
+ *  de mercado. */
 function filtrarPorPeriodo(resolvidas, periodo) {
   if (periodo === "total" || resolvidas.length === 0) return resolvidas;
   const maisRecente = new Date(resolvidas[resolvidas.length - 1].criado_em);
   let corte;
   if (periodo === "diario") {
     corte = new Date(maisRecente);
-    corte.setHours(0, 0, 0, 0);
+    corte.setHours(19, 0, 0, 0);
+    if (corte > maisRecente) corte.setDate(corte.getDate() - 1);
   } else if (periodo === "semanal") {
     corte = new Date(maisRecente.getTime() - 7 * 24 * 60 * 60 * 1000);
   } else {
