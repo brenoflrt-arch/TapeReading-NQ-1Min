@@ -22,45 +22,43 @@
     </div>
   </section>
 
-  <section class="cartao">
-    <h2>Relatório de performance</h2>
-    <div class="relatorio-grade">
-      <div class="relatorio-coluna">
-        <h3>Todas as operações</h3>
-        <div class="relatorio-linha"><span>P/L líquido</span><span id="rel-pl-bruto">—</span></div>
-        <div class="relatorio-linha"><span># de operações</span><span id="rel-num-operacoes">—</span></div>
-        <div class="relatorio-linha"><span>Tempo médio por operação</span><span id="rel-tempo-medio">—</span></div>
-        <div class="relatorio-linha"><span>Operação mais longa</span><span id="rel-tempo-maior">—</span></div>
-        <div class="relatorio-linha"><span>% de operações lucrativas</span><span id="rel-taxa-acerto">—</span></div>
-        <div class="relatorio-linha"><span>Expectativa por operação</span><span id="rel-expectativa">—</span></div>
-        <div class="relatorio-linha"><span>Corretagem total</span><span id="rel-corretagem-total">—</span></div>
+  <section class="cartao cartao-performance">
+    <div class="performance-tira">
+      <div class="tira-item">
+        <span class="tira-rotulo">Resultado total</span>
+        <span class="tira-valor" id="perf-resultado-total">—</span>
       </div>
-      <div class="relatorio-coluna">
-        <h3 class="titulo-compra">Operações vencedoras</h3>
-        <div class="relatorio-linha"><span>Lucro total</span><span id="rel-lucro-total">—</span></div>
-        <div class="relatorio-linha"><span># de vencedoras</span><span id="rel-num-gain">—</span></div>
-        <div class="relatorio-linha"><span>Maior vencedora</span><span id="rel-maior-gain">—</span></div>
-        <div class="relatorio-linha"><span>Média por vencedora</span><span id="rel-media-gain">—</span></div>
-        <div class="relatorio-linha"><span>Desvio padrão</span><span id="rel-desvio-gain">—</span></div>
-        <div class="relatorio-linha"><span>Tempo médio</span><span id="rel-tempo-gain">—</span></div>
-        <div class="relatorio-linha"><span>Máx. run-up</span><span id="rel-max-runup">—</span></div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Lucro bruto</span>
+        <span class="tira-valor" id="perf-lucro-bruto">—</span>
       </div>
-      <div class="relatorio-coluna">
-        <h3 class="titulo-venda">Operações perdedoras</h3>
-        <div class="relatorio-linha"><span>Prejuízo total</span><span id="rel-prejuizo-total">—</span></div>
-        <div class="relatorio-linha"><span># de perdedoras</span><span id="rel-num-stop">—</span></div>
-        <div class="relatorio-linha"><span>Maior perdedora</span><span id="rel-maior-stop">—</span></div>
-        <div class="relatorio-linha"><span>Média por perdedora</span><span id="rel-media-stop">—</span></div>
-        <div class="relatorio-linha"><span>Desvio padrão</span><span id="rel-desvio-stop">—</span></div>
-        <div class="relatorio-linha"><span>Tempo médio</span><span id="rel-tempo-stop">—</span></div>
-        <div class="relatorio-linha"><span>Máx. drawdown</span><span id="rel-max-drawdown">—</span></div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Prejuízo bruto</span>
+        <span class="tira-valor" id="perf-prejuizo-bruto">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações</span>
+        <span class="tira-valor" id="perf-operacoes">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Vencedoras</span>
+        <span class="tira-valor" id="perf-vencedoras">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Custos</span>
+        <span class="tira-valor" id="perf-custos">—</span>
       </div>
     </div>
-  </section>
 
-  <section class="cartao">
-    <h2>Resultado acumulado</h2>
-    <svg id="grafico-acumulado" class="grafico-acumulado" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+    <div class="performance-abas" id="performance-abas">
+      <button class="aba-periodo" data-periodo="diario" type="button">Diário</button>
+      <button class="aba-periodo" data-periodo="semanal" type="button">Semanal</button>
+      <button class="aba-periodo" data-periodo="mensal" type="button">Mensal</button>
+      <button class="aba-periodo aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
+    </div>
+
+    <p class="performance-titulo-grafico">Patrimônio</p>
+    <svg id="grafico-patrimonio" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
   </section>
 
   <section class="cartao">

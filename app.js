@@ -74,29 +74,29 @@ function tocarAudioOperacaoValidada(operacao) {
   audio.play().catch(() => {});
 }
 
-const elementosRelatorio = {
-  plBruto: document.getElementById("rel-pl-bruto"),
-  numOperacoes: document.getElementById("rel-num-operacoes"),
-  tempoMedio: document.getElementById("rel-tempo-medio"),
-  tempoMaior: document.getElementById("rel-tempo-maior"),
-  taxaAcerto: document.getElementById("rel-taxa-acerto"),
-  expectativa: document.getElementById("rel-expectativa"),
-  corretagemTotal: document.getElementById("rel-corretagem-total"),
-  lucroTotal: document.getElementById("rel-lucro-total"),
-  numGain: document.getElementById("rel-num-gain"),
-  maiorGain: document.getElementById("rel-maior-gain"),
-  mediaGain: document.getElementById("rel-media-gain"),
-  desvioGain: document.getElementById("rel-desvio-gain"),
-  tempoGain: document.getElementById("rel-tempo-gain"),
-  maxRunup: document.getElementById("rel-max-runup"),
-  prejuizoTotal: document.getElementById("rel-prejuizo-total"),
-  numStop: document.getElementById("rel-num-stop"),
-  maiorStop: document.getElementById("rel-maior-stop"),
-  mediaStop: document.getElementById("rel-media-stop"),
-  desvioStop: document.getElementById("rel-desvio-stop"),
-  tempoStop: document.getElementById("rel-tempo-stop"),
-  maxDrawdown: document.getElementById("rel-max-drawdown"),
+const elementoPerf = {
+  resultadoTotal: document.getElementById("perf-resultado-total"),
+  lucroBruto: document.getElementById("perf-lucro-bruto"),
+  prejuizoBruto: document.getElementById("perf-prejuizo-bruto"),
+  operacoes: document.getElementById("perf-operacoes"),
+  vencedoras: document.getElementById("perf-vencedoras"),
+  custos: document.getElementById("perf-custos"),
 };
+const elementoGraficoPatrimonio = document.getElementById("grafico-patrimonio");
+const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo");
+
+// Pedido de 2026-08-05: filtro de período pro gráfico de patrimônio (estilo relatório do
+// NinjaTrader) -- "diario" pega só o dia calendário mais recente presente nos dados (não
+// necessariamente "hoje" se o mercado ainda não abriu de novo), os outros contam pra trás a
+// partir de agora.
+let periodoSelecionado = "total";
+elementosAbaPeriodo.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    periodoSelecionado = botao.dataset.periodo;
+    elementosAbaPeriodo.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
+    atualizar();
+  });
+});
 
 /** Preço mais recente negociado -- não usa cotacao_atual (o servidor.py só grava lá fora do
  *  modo SOMENTE_ANALISE) -- negociacoes_tempo_real é publicado por publicador_dashboard.py
@@ -176,158 +176,92 @@ function celulaResultadoOrdemLimite(op) {
   return `<span class="tag-resultado ${classe}">${op.resultado_ordem_limite}</span>`;
 }
 
-// ---- Relatório de performance (estilo "Trade Performance" do NinjaTrader) ----
-
-function horarioParaMs(horario) {
-  const [hh, mm, ss] = horario.split(":");
-  return (parseInt(hh, 10) * 3600 + parseInt(mm, 10) * 60 + parseFloat(ss)) * 1000;
-}
-
-function formatarDuracao(ms) {
-  if (!isFinite(ms) || ms < 0) return "—";
-  const totalSeg = Math.round(ms / 1000);
-  const min = Math.floor(totalSeg / 60);
-  const seg = totalSeg % 60;
-  return `${min}min ${seg}s`;
-}
+// ---- Gráfico de performance (estilo relatório "Patrimônio" do NinjaTrader) ----
 
 function somar(lista) {
   return lista.reduce((a, b) => a + b, 0);
 }
 
-function media(lista) {
-  return lista.length ? somar(lista) / lista.length : 0;
+/** Só as operações resolvidas dentro do período escolhido nas abas (Diário/Semanal/Mensal/Todo
+ *  período) -- "diario" usa o dia calendário da operação mais recente (não "hoje" no relógio do
+ *  navegador, pra não zerar o gráfico fora do horário de mercado). */
+function filtrarPorPeriodo(resolvidas, periodo) {
+  if (periodo === "total" || resolvidas.length === 0) return resolvidas;
+  const maisRecente = new Date(resolvidas[resolvidas.length - 1].criado_em);
+  let corte;
+  if (periodo === "diario") {
+    corte = new Date(maisRecente);
+    corte.setHours(0, 0, 0, 0);
+  } else if (periodo === "semanal") {
+    corte = new Date(maisRecente.getTime() - 7 * 24 * 60 * 60 * 1000);
+  } else {
+    corte = new Date(maisRecente.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+  return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-function desvioPadrao(lista) {
-  if (lista.length < 2) return 0;
-  const m = media(lista);
-  const variancia = somar(lista.map((v) => (v - m) ** 2)) / (lista.length - 1);
-  return Math.sqrt(variancia);
-}
-
-/** Constrói a curva de patrimônio acumulado (1 ponto por operação resolvida, em ordem
- *  cronológica) e junto calcula máx. run-up (maior alta do vale até o pico seguinte) e máx.
- *  drawdown (maior queda do pico até o vale seguinte) -- mesmo conceito do relatório do Ninja. */
-function calcularEstatisticas(resolvidas) {
+/** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
+ *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
+function calcularResumoPerformance(resolvidas) {
   const gains = resolvidas.filter((o) => o.status === "gain");
   const stops = resolvidas.filter((o) => o.status === "stop");
-
-  const valores = resolvidas.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
   const valoresGain = gains.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
   const valoresStop = stops.map((o) => o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO);
-
-  const duracao = (o) => horarioParaMs(o.horario_resultado) - horarioParaMs(o.horario_entrada);
-  const duracoesTodas = resolvidas.map(duracao);
-  const duracoesGain = gains.map(duracao);
-  const duracoesStop = stops.map(duracao);
+  const custos = resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO;
 
   let acumulado = 0;
   const curva = resolvidas.map((o) => {
-    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
-    return { valor: acumulado, horario: o.horario_resultado, status: o.status };
+    acumulado += o.resultado_pontos * DOLAR_POR_PONTO_OPERACAO - CUSTO_CORRETAGEM_POR_CONTRATO;
+    return { valor: acumulado, data: new Date(o.criado_em), status: o.status };
   });
-
-  let maxRunup = 0, runupDe = null, runupPara = null;
-  let maxDrawdown = 0, drawdownDe = null, drawdownPara = null;
-  let minAteAgora = 0, horarioMin = resolvidas[0] ? resolvidas[0].horario_entrada : null;
-  let maxAteAgora = 0, horarioMax = resolvidas[0] ? resolvidas[0].horario_entrada : null;
-
-  for (const ponto of curva) {
-    const runupAtual = ponto.valor - minAteAgora;
-    if (runupAtual > maxRunup) {
-      maxRunup = runupAtual;
-      runupDe = horarioMin;
-      runupPara = ponto.horario;
-    }
-    if (ponto.valor < minAteAgora) {
-      minAteAgora = ponto.valor;
-      horarioMin = ponto.horario;
-    }
-
-    const drawdownAtual = ponto.valor - maxAteAgora;
-    if (drawdownAtual < maxDrawdown) {
-      maxDrawdown = drawdownAtual;
-      drawdownDe = horarioMax;
-      drawdownPara = ponto.horario;
-    }
-    if (ponto.valor > maxAteAgora) {
-      maxAteAgora = ponto.valor;
-      horarioMax = ponto.horario;
-    }
-  }
 
   return {
     curva,
-    // P/L líquido = bruto - corretagem (custo por contrato x total de operações, cada uma
-    // negocia 1 contrato) -- pedido de 2026-08-05.
-    plBruto: somar(valores) - resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO,
-    corretagemTotal: resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO,
+    resultadoTotal: somar(valoresGain) + somar(valoresStop) - custos,
+    lucroBruto: somar(valoresGain),
+    prejuizoBruto: somar(valoresStop),
     numOperacoes: resolvidas.length,
-    tempoMedio: media(duracoesTodas),
-    tempoMaior: duracoesTodas.length ? Math.max(...duracoesTodas) : 0,
-    taxaAcerto: resolvidas.length ? (gains.length / resolvidas.length) * 100 : 0,
-    expectativa: resolvidas.length ? somar(valores) / resolvidas.length : 0,
-
-    lucroTotal: somar(valoresGain),
-    numGain: gains.length,
-    maiorGain: valoresGain.length ? Math.max(...valoresGain) : 0,
-    mediaGain: media(valoresGain),
-    desvioGain: desvioPadrao(valoresGain),
-    tempoGain: media(duracoesGain),
-    maxRunup, runupDe, runupPara,
-
-    prejuizoTotal: somar(valoresStop),
-    numStop: stops.length,
-    maiorStop: valoresStop.length ? Math.min(...valoresStop) : 0,
-    mediaStop: media(valoresStop),
-    desvioStop: desvioPadrao(valoresStop),
-    tempoStop: media(duracoesStop),
-    maxDrawdown, drawdownDe, drawdownPara,
+    taxaVencedoras: resolvidas.length ? (gains.length / resolvidas.length) * 100 : 0,
+    custos,
   };
 }
 
-function preencherRelatorio(est) {
-  const el = elementosRelatorio;
-  el.plBruto.textContent = formatarDolar(est.plBruto);
-  el.plBruto.className = est.plBruto >= 0 ? "positivo" : "negativo";
-  el.numOperacoes.textContent = est.numOperacoes;
-  el.tempoMedio.textContent = formatarDuracao(est.tempoMedio);
-  el.tempoMaior.textContent = formatarDuracao(est.tempoMaior);
-  el.taxaAcerto.textContent = `${est.taxaAcerto.toFixed(1)}%`;
-  el.expectativa.textContent = formatarDolar(est.expectativa);
-  el.corretagemTotal.textContent = formatarDolar(est.corretagemTotal);
-
-  el.lucroTotal.textContent = formatarDolar(est.lucroTotal);
-  el.numGain.textContent = est.numGain;
-  el.maiorGain.textContent = formatarDolar(est.maiorGain);
-  el.mediaGain.textContent = formatarDolar(est.mediaGain);
-  el.desvioGain.textContent = formatarDolar(est.desvioGain);
-  el.tempoGain.textContent = est.numGain ? formatarDuracao(est.tempoGain) : "—";
-  el.maxRunup.textContent = est.runupPara
-    ? `${formatarDolar(est.maxRunup)} (${est.runupDe.slice(0, 8)} → ${est.runupPara.slice(0, 8)})`
-    : "—";
-
-  el.prejuizoTotal.textContent = formatarDolar(est.prejuizoTotal);
-  el.numStop.textContent = est.numStop;
-  el.maiorStop.textContent = formatarDolar(est.maiorStop);
-  el.mediaStop.textContent = formatarDolar(est.mediaStop);
-  el.desvioStop.textContent = formatarDolar(est.desvioStop);
-  el.tempoStop.textContent = est.numStop ? formatarDuracao(est.tempoStop) : "—";
-  el.maxDrawdown.textContent = est.drawdownPara
-    ? `${formatarDolar(est.maxDrawdown)} (${est.drawdownDe.slice(0, 8)} → ${est.drawdownPara.slice(0, 8)})`
-    : "—";
+function preencherTiraPerformance(resumo) {
+  const el = elementoPerf;
+  el.resultadoTotal.textContent = formatarDolar(resumo.resultadoTotal);
+  el.resultadoTotal.className = "tira-valor " + (resumo.resultadoTotal >= 0 ? "positivo" : "negativo");
+  el.lucroBruto.textContent = formatarDolar(resumo.lucroBruto);
+  el.prejuizoBruto.textContent = formatarDolar(resumo.prejuizoBruto);
+  el.operacoes.textContent = resumo.numOperacoes;
+  el.vencedoras.textContent = `${resumo.taxaVencedoras.toFixed(2)}%`;
+  el.custos.textContent = formatarDolar(resumo.custos);
 }
 
-/** Gráfico de barras do resultado acumulado (1 barra por operação, altura = patrimônio
- *  acumulado naquele ponto, cor = se aquela operação foi gain/stop) -- mesmo estilo do
- *  relatório "P&L History" do NinjaTrader. */
-function desenharGraficoAcumulado(curva) {
-  const largura = 600;
-  const altura = 200;
+/** Formata valores do eixo Y abreviados em milhares (estilo "4,33k"), igual o relatório de
+ *  Patrimônio do NinjaTrader. */
+function formatarEixoY(valor) {
+  if (Math.abs(valor) >= 1000) {
+    return `${(valor / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}k`;
+  }
+  return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Gráfico de área do patrimônio acumulado, no estilo do relatório "Patrimônio" do NinjaTrader:
+ *  linha + preenchimento em degradê, verde acima de zero e vermelho abaixo, eixo de preço à
+ *  direita e datas no eixo X (posicionadas pelo tempo real decorrido, não por índice). */
+function desenharGraficoPatrimonio(curva) {
+  const largura = 900;
+  const altura = 340;
+  const margemDireita = 70;
+  const margemBaixo = 24;
+  const larguraUtil = largura - margemDireita;
+  const alturaUtil = altura - margemBaixo;
 
   if (curva.length === 0) {
-    elementoGraficoAcumulado.innerHTML = "";
+    elementoGraficoPatrimonio.innerHTML = `
+      <text x="${largura / 2}" y="${altura / 2}" fill="#555" font-size="13" text-anchor="middle">
+        nenhuma operação resolvida nesse período
+      </text>`;
     return;
   }
 
@@ -335,23 +269,63 @@ function desenharGraficoAcumulado(curva) {
   const minimo = Math.min(0, ...valores);
   const maximo = Math.max(0, ...valores);
   const amplitude = (maximo - minimo) || 1;
-
-  const paraY = (v) => altura - ((v - minimo) / amplitude) * altura;
+  const paraY = (v) => alturaUtil - ((v - minimo) / amplitude) * alturaUtil;
   const yZero = paraY(0);
-  const larguraBarra = Math.max(1, largura / curva.length - 1);
 
-  const barras = curva.map((p, i) => {
-    const x = (i / curva.length) * largura;
-    const yValor = paraY(p.valor);
-    const y = Math.min(yValor, yZero);
-    const alturaBarra = Math.max(1, Math.abs(yValor - yZero));
-    const cor = p.status === "gain" ? "#15803d" : "#ef5350";
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${larguraBarra.toFixed(1)}" height="${alturaBarra.toFixed(1)}" fill="${cor}" />`;
-  }).join("");
+  const tempoInicio = curva[0].data.getTime();
+  const tempoFim = curva[curva.length - 1].data.getTime();
+  const duracaoTotal = (tempoFim - tempoInicio) || 1;
+  const paraX = (data) => ((data.getTime() - tempoInicio) / duracaoTotal) * larguraUtil;
 
-  elementoGraficoAcumulado.innerHTML = `
-    <line x1="0" y1="${yZero.toFixed(1)}" x2="${largura}" y2="${yZero.toFixed(1)}" stroke="#333333" stroke-width="1" stroke-dasharray="4,4" />
-    ${barras}
+  // Linhas de grade horizontais + rótulos do eixo Y (5 faixas, de cima a baixo).
+  const NUM_FAIXAS = 6;
+  let grade = "";
+  for (let i = 0; i <= NUM_FAIXAS; i++) {
+    const valor = maximo - (i / NUM_FAIXAS) * amplitude;
+    const y = paraY(valor);
+    grade += `<line x1="0" y1="${y.toFixed(1)}" x2="${larguraUtil}" y2="${y.toFixed(1)}" stroke="#1c1c1c" stroke-width="1" />`;
+    grade += `<text x="${larguraUtil + 8}" y="${(y + 4).toFixed(1)}" fill="#666" font-size="10.5">${formatarEixoY(valor)}</text>`;
+  }
+
+  // Rótulos de data no eixo X -- só quando o dia muda (ou no primeiro ponto).
+  let rotulosData = "";
+  let ultimoDia = null;
+  for (const ponto of curva) {
+    const chaveDia = ponto.data.toLocaleDateString("pt-BR");
+    if (chaveDia !== ultimoDia) {
+      const x = paraX(ponto.data);
+      rotulosData += `<text x="${x.toFixed(1)}" y="${altura - 6}" fill="#666" font-size="10.5" text-anchor="middle">${chaveDia}</text>`;
+      ultimoDia = chaveDia;
+    }
+  }
+
+  // Caminho da linha/área -- inclui um ponto inicial em (0, patrimônio=0) pra área começar do zero.
+  const pontos = [{ x: 0, y: yZero }, ...curva.map((p) => ({ x: paraX(p.data), y: paraY(p.valor) }))];
+  const caminhoLinha = pontos.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const caminhoArea = `${caminhoLinha} L${pontos[pontos.length - 1].x.toFixed(1)},${yZero.toFixed(1)} L0,${yZero.toFixed(1)} Z`;
+
+  const fracaoZero = Math.max(0, Math.min(1, yZero / alturaUtil));
+
+  elementoGraficoPatrimonio.innerHTML = `
+    <defs>
+      <linearGradient id="areaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${alturaUtil}">
+        <stop offset="0" stop-color="#15803d" stop-opacity="0.5" />
+        <stop offset="${fracaoZero.toFixed(3)}" stop-color="#15803d" stop-opacity="0.03" />
+        <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" stop-opacity="0.03" />
+        <stop offset="1" stop-color="#ef5350" stop-opacity="0.5" />
+      </linearGradient>
+      <linearGradient id="linhaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${alturaUtil}">
+        <stop offset="0" stop-color="#22c55e" />
+        <stop offset="${fracaoZero.toFixed(3)}" stop-color="#22c55e" />
+        <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" />
+        <stop offset="1" stop-color="#ef5350" />
+      </linearGradient>
+    </defs>
+    ${grade}
+    <line x1="0" y1="${yZero.toFixed(1)}" x2="${larguraUtil}" y2="${yZero.toFixed(1)}" stroke="#333333" stroke-width="1" />
+    <path d="${caminhoArea}" fill="url(#areaPatrimonio)" stroke="none" />
+    <path d="${caminhoLinha}" fill="none" stroke="url(#linhaPatrimonio)" stroke-width="1.75" />
+    ${rotulosData}
   `;
 }
 
@@ -386,9 +360,10 @@ async function atualizar() {
     const resolvidas = [...operacoesSimuladas]
       .filter((o) => o.status === "gain" || o.status === "stop")
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
-    const est = calcularEstatisticas(resolvidas);
-    preencherRelatorio(est);
-    desenharGraficoAcumulado(est.curva);
+    const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
+    const resumo = calcularResumoPerformance(resolvidasNoPeriodo);
+    preencherTiraPerformance(resumo);
+    desenharGraficoPatrimonio(resumo.curva);
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length

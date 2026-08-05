@@ -142,61 +142,95 @@ main {
   color: #555;
 }
 
-/* ---- relatório de performance ---- */
+/* ---- gráfico de performance (estilo relatório "Patrimônio" do NinjaTrader) ---- */
 
-.relatorio-grade {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+.positivo { color: #15803d; }
+.negativo { color: #ef5350; }
+
+.cartao-performance {
+  padding: 0;
+  overflow: hidden;
 }
 
-@media (max-width: 820px) {
-  .relatorio-grade {
-    grid-template-columns: 1fr;
-  }
+.performance-tira {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid #262626;
 }
 
-.relatorio-coluna h3 {
+.tira-item {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  border-right: 1px solid #262626;
+}
+
+.tira-item:last-child {
+  border-right: none;
+}
+
+.tira-rotulo {
+  font-size: 11px;
+  color: #8a8a8a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.tira-valor {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #d1d4dc;
+}
+
+.performance-abas {
+  display: flex;
+  gap: 4px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #262626;
+}
+
+.aba-periodo {
+  background: transparent;
+  border: 1px solid #262626;
+  color: #8a8a8a;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.aba-periodo:hover {
+  color: #d1d4dc;
+  border-color: #333333;
+}
+
+.aba-periodo-ativa,
+.aba-periodo-ativa:hover {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.performance-titulo-grafico {
+  margin: 14px 0 4px;
+  padding: 0 18px;
   font-size: 12px;
   font-weight: 600;
   color: #8a8a8a;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  margin: 0 0 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #262626;
+  text-align: center;
 }
 
-.relatorio-coluna h3.titulo-compra { color: #15803d; }
-.relatorio-coluna h3.titulo-venda { color: #ef5350; }
-
-.relatorio-linha {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 5px 0;
-  font-size: 12.5px;
-}
-
-.relatorio-linha span:first-child {
-  color: #8a8a8a;
-}
-
-.relatorio-linha span:last-child {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.positivo { color: #15803d; }
-.negativo { color: #ef5350; }
-
-/* ---- gráfico de resultado acumulado ---- */
-
-.grafico-acumulado {
+.grafico-patrimonio {
   width: 100%;
-  height: 220px;
+  height: 340px;
   display: block;
+  padding: 0 8px 8px;
 }
 
 /* ---- tabelas ---- */
