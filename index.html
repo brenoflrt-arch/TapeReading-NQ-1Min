@@ -69,8 +69,37 @@
     <svg id="grafico-patrimonio" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
   </section>
 
+  <!-- Pedido de 2026-08-05: tabela "Operações" separada da antiga (agora "Registros") --
+       simplificada, só com o que realmente conta a partir de agora no resumo de performance
+       (Resultado Ordem Limite). O histórico de antes dessa mudança não muda -- só a forma de
+       apresentar/contar daqui pra frente. -->
   <section class="cartao">
     <h2>Operações</h2>
+    <div class="protegido" id="protegido-operacoes-novas" data-bloqueado="true">
+      <div class="tabela-rolavel">
+        <table class="tabela-padroes">
+          <thead>
+            <tr><th>Horário</th><th>Operação</th><th>Nível entrada</th><th>Negócios</th><th>Resultado ordem limite</th></tr>
+          </thead>
+          <tbody id="corpo-tabela-operacoes">
+            <tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bloqueio-login" id="bloqueio-login-operacoes">
+        <form id="form-login-operacoes" class="form-login">
+          <span class="bloqueio-titulo">Área restrita</span>
+          <input type="email" id="login-email-operacoes" placeholder="e-mail" autocomplete="username" required />
+          <input type="password" id="login-senha-operacoes" placeholder="senha" autocomplete="current-password" required />
+          <button type="submit">Entrar</button>
+          <span class="bloqueio-erro" id="bloqueio-erro-operacoes"></span>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="cartao">
+    <h2>Registros</h2>
     <div class="protegido" id="protegido-operacoes" data-bloqueado="true">
       <div class="tabela-rolavel">
         <table class="tabela-padroes">

@@ -13,38 +13,58 @@ const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
 const elementoPrecoHorario = document.getElementById("preco-horario");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
+const elementoCorpoTabelaOperacoes = document.getElementById("corpo-tabela-operacoes");
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 const elementoBotaoSom = document.getElementById("botao-som");
 
-// ---- Área restrita (tabela de operações fica borrada até logar, pedido de 2026-08-04) --
-// mesmo login (Supabase Auth) já usado na "Área restrita" do painel MNPK, mesmo projeto
-// Supabase -- a sessão persiste sozinha (supabase-js guarda em localStorage), então só pede
-// login de novo se a sessão expirar ou o usuário nunca tiver logado nesse navegador.
+// ---- Área restrita (tabelas ficam borradas até logar, pedido de 2026-08-04 -- e desde
+// 2026-08-05 são DUAS tabelas, "Operações" e "Registros", com um formulário de login cada, mas
+// as duas compartilham a MESMA sessão do Supabase Auth -- logar em qualquer uma libera as duas).
+// Mesmo login já usado na "Área restrita" do painel MNPK, mesmo projeto Supabase -- a sessão
+// persiste sozinha (supabase-js guarda em localStorage), então só pede login de novo se a
+// sessão expirar ou o usuário nunca tiver logado nesse navegador.
 const elementoProtegidoOperacoes = document.getElementById("protegido-operacoes");
 const elementoFormLogin = document.getElementById("form-login");
 const elementoLoginEmail = document.getElementById("login-email");
 const elementoLoginSenha = document.getElementById("login-senha");
 const elementoBloqueioErro = document.getElementById("bloqueio-erro");
 
+const elementoProtegidoOperacoesNovas = document.getElementById("protegido-operacoes-novas");
+const elementoFormLoginOperacoes = document.getElementById("form-login-operacoes");
+const elementoLoginEmailOperacoes = document.getElementById("login-email-operacoes");
+const elementoLoginSenhaOperacoes = document.getElementById("login-senha-operacoes");
+const elementoBloqueioErroOperacoes = document.getElementById("bloqueio-erro-operacoes");
+
 function atualizarBloqueio(sessao) {
   elementoProtegidoOperacoes.dataset.bloqueado = sessao ? "false" : "true";
+  elementoProtegidoOperacoesNovas.dataset.bloqueado = sessao ? "false" : "true";
 }
 
 supabaseCliente.auth.getSession().then(({ data }) => atualizarBloqueio(data.session));
 supabaseCliente.auth.onAuthStateChange((_evento, sessao) => atualizarBloqueio(sessao));
 
+async function tentarLogin(email, senha, elementoErro) {
+  elementoErro.textContent = "";
+  const { error } = await supabaseCliente.auth.signInWithPassword({ email, password: senha });
+  if (error) {
+    elementoErro.textContent = "E-mail ou senha inválidos.";
+    return false;
+  }
+  return true;
+}
+
 elementoFormLogin.addEventListener("submit", async (evento) => {
   evento.preventDefault();
-  elementoBloqueioErro.textContent = "";
-  const { error } = await supabaseCliente.auth.signInWithPassword({
-    email: elementoLoginEmail.value,
-    password: elementoLoginSenha.value,
-  });
-  if (error) {
-    elementoBloqueioErro.textContent = "E-mail ou senha inválidos.";
-    return;
+  if (await tentarLogin(elementoLoginEmail.value, elementoLoginSenha.value, elementoBloqueioErro)) {
+    elementoLoginSenha.value = "";
   }
-  elementoLoginSenha.value = "";
+});
+
+elementoFormLoginOperacoes.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  if (await tentarLogin(elementoLoginEmailOperacoes.value, elementoLoginSenhaOperacoes.value, elementoBloqueioErroOperacoes)) {
+    elementoLoginSenhaOperacoes.value = "";
+  }
 });
 
 // ---- Áudio: toca quando uma operação NOVA é validada (mesmo momento do áudio "compradores/
@@ -221,20 +241,14 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-/** Resultado "de verdade" de uma operação -- pedido de 2026-08-05: agora prioriza o Resultado
- *  Ordem Limite (simula a entrada real do Ninja, que voltou a ser ordem limite na trava) sempre
- *  que ele existe e preencheu ("nao_preenchida" não conta); cai pro Resultado Entrada
- *  (resultado_real) nas operações sem dado de ordem limite; só cai pro Resultado Análise (nível
- *  teórico) como último recurso, quando não tem nem um nem outro. Revertido em 2026-08-05 (3ª
- *  vez): tentamos restringir só a operações reais, mas isso esvaziou demais o resumo/gráfico
- *  (só 39 de 99 padrões confirmados têm preenchimento real) -- volta a misturar simulado com
- *  real no agregado, aceitando a contrapartida de contar padrões que não viraram posição. */
+/** Resultado "de verdade" de uma operação -- pedido de 2026-08-05 (4ª vez): a partir de agora o
+ *  resumo/gráfico e a tabela "Operações" contam só o Resultado Ordem Limite (não mais Resultado
+ *  Análise nem Resultado Entrada, que passaram a confundir por discordarem entre si). A lista
+ *  `resolvidas` já vem filtrada só pra linhas com resultado_ordem_limite resolvido -- ver
+ *  atualizar() -- então aqui é direto, sem fallback. Não muda o histórico: resultado_ordem_limite
+ *  já era calculado antes, só passou a ser o campo que decide o resumo. */
 function resultadoEfetivo(o) {
-  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
-    return o.resultado_ordem_limite;
-  }
-  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
-  return o.resultado;
+  return o.resultado_ordem_limite;
 }
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
@@ -407,17 +421,38 @@ async function atualizar() {
       }
     }
 
+    // Pedido de 2026-08-05 (2ª vez): daqui pra frente o resumo de performance conta só as
+    // operações com Resultado Ordem Limite resolvido (lucro/prejuízo) -- não mais Resultado
+    // Análise nem Resultado Entrada. Isso não muda o histórico (resultado_ordem_limite já era
+    // calculado antes), só troca qual campo alimenta o resumo/gráfico do topo.
+    //
     // passaria_filtro_3min null = operação de antes dessa coluna existir (quando o filtro ainda
     // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
     // antigo quando o filtro simulado está selecionado.
     const resolvidas = [...operacoesSimuladas]
-      .filter((o) => o.status === "gain" || o.status === "stop")
+      .filter((o) => o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo")
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
     const resumo = calcularResumoPerformance(resolvidasNoPeriodo);
     preencherTiraPerformance(resumo);
     desenharGraficoPatrimonio(resumo.curva);
+
+    // Tabela nova "Operações" (pedido de 2026-08-05): só Horário/Operação/Nível entrada/
+    // Negócios/Resultado Ordem Limite -- só entram aqui as que já preencheram de verdade nesse
+    // modelo (lucro/prejuízo), não as "nao_preenchida" nem as ainda em aberto.
+    const operacoesRegistradas = resolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    elementoCorpoTabelaOperacoes.innerHTML = operacoesRegistradas.length
+      ? operacoesRegistradas.map((o) => `
+        <tr>
+          <td>${o.horario_entrada.slice(0, 8)}</td>
+          <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
+          <td>${formatarPreco(o.preco_entrada)}</td>
+          <td>${o.negocios_acumulados ?? "—"}</td>
+          <td>${celulaResultadoOrdemLimite(o)}</td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda</td></tr>';
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
