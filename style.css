@@ -222,6 +222,36 @@ main {
   color: #ffffff;
 }
 
+/* Toggle Real vs Simulado com filtro 3min (2026-08-05) -- mesma base do aba-periodo, mas cor de
+   destaque diferente (azul) pra não confundir com as abas de período (verde), já que são dois
+   filtros independentes agindo ao mesmo tempo. */
+.performance-abas-filtro {
+  border-bottom: none;
+  padding-top: 0;
+}
+
+.aba-filtro {
+  background: transparent;
+  border: 1px solid #262626;
+  color: #8a8a8a;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.aba-filtro:hover {
+  color: #d1d4dc;
+  border-color: #333333;
+}
+
+.aba-filtro-ativa,
+.aba-filtro-ativa:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
 .performance-titulo-grafico {
   margin: 14px 0 4px;
   padding: 0 18px;

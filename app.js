@@ -100,6 +100,21 @@ elementosAbaPeriodo.forEach((botao) => {
   });
 });
 
+// Pedido de 2026-08-05: produção passou a rodar SEM o filtro de formação mínima (3min) --
+// analisador_tentativas_pequenas.py continua calculando se cada operação passaria nele mesmo
+// assim (passaria_filtro_3min), então dá pra comparar aqui "real" (todas as operações, o que
+// está acontecendo de verdade na conta) vs "simulado com filtro" (só as que passariam, um
+// subconjunto -- não é um resultado diferente por operação, é a mesma operação incluída ou não).
+const elementosAbaFiltro = document.querySelectorAll(".aba-filtro");
+let filtroSelecionado = "real";
+elementosAbaFiltro.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    filtroSelecionado = botao.dataset.filtro;
+    elementosAbaFiltro.forEach((b) => b.classList.toggle("aba-filtro-ativa", b === botao));
+    atualizar();
+  });
+});
+
 /** Preço mais recente negociado -- não usa cotacao_atual (o servidor.py só grava lá fora do
  *  modo SOMENTE_ANALISE) -- negociacoes_tempo_real é publicado por publicador_dashboard.py
  *  independente disso, então é a fonte confiável de preço ao vivo aqui. */
@@ -130,7 +145,7 @@ async function buscarOperacoesSimuladas() {
   // gravada perto da hora real do mercado, não só num replay tardio).
   const { data, error } = await supabaseCliente
     .from("operacoes_simuladas_pequenas")
-    .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_ordem_limite,resultado_pontos,horario_entrada,horario_resultado,criado_em")
+    .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_ordem_limite,resultado_pontos,horario_entrada,horario_resultado,criado_em,passaria_filtro_3min")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false });
   if (error) throw error;
@@ -392,8 +407,12 @@ async function atualizar() {
       }
     }
 
+    // passaria_filtro_3min null = operação de antes dessa coluna existir (quando o filtro ainda
+    // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
+    // antigo quando o filtro simulado está selecionado.
     const resolvidas = [...operacoesSimuladas]
       .filter((o) => o.status === "gain" || o.status === "stop")
+      .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
     const resumo = calcularResumoPerformance(resolvidasNoPeriodo);
