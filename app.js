@@ -206,13 +206,18 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-/** Resultado "de verdade" de uma operação -- prioriza o preenchimento REAL do Ninja
- *  (resultado_real) sempre que ele existe; só cai pro Resultado Análise (nível teórico) nas
- *  operações que o Ninja nunca chegou a preencher (preco_real_entrada null). Corrigido em
- *  2026-08-05: o resumo de performance somava só o status (Resultado Análise), que às vezes dá
- *  "lucro" num caso que a execução real deu prejuízo de verdade (preço real de entrada pior que
- *  o nível calculado) -- o card ficava mostrando um resultado mais otimista que a conta real. */
+/** Resultado "de verdade" de uma operação -- pedido de 2026-08-05: agora prioriza o Resultado
+ *  Ordem Limite (simula a entrada real do Ninja, que voltou a ser ordem limite na trava) sempre
+ *  que ele existe e preencheu ("nao_preenchida" não conta); cai pro Resultado Entrada
+ *  (resultado_real) nas operações sem dado de ordem limite; só cai pro Resultado Análise (nível
+ *  teórico) como último recurso, quando não tem nem um nem outro. Antes disso (mesmo dia,
+ *  correção anterior) priorizava resultado_real -- trocado porque a execução real passou a ser
+ *  via ordem limite, então resultado_ordem_limite é o que mais se aproxima do que a conta real
+ *  vai fazer daqui pra frente. */
 function resultadoEfetivo(o) {
+  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
+    return o.resultado_ordem_limite;
+  }
   if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
   return o.resultado;
 }
