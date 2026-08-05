@@ -4,6 +4,9 @@ const INTERVALO_ATUALIZACAO_MS = 3000;
 // Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
 // pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
 const DOLAR_POR_PONTO_OPERACAO = 20;
+// Pedido de 2026-08-05: custo de corretagem por contrato (1 NQ), abatido do P/L pra virar
+// líquido -- multiplica pelo total de operações resolvidas (cada uma negocia 1 contrato).
+const CUSTO_CORRETAGEM_POR_CONTRATO = 3.10;
 const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
 
 const elementoStatus = document.getElementById("status");
@@ -255,7 +258,9 @@ function calcularEstatisticas(resolvidas) {
 
   return {
     curva,
-    plBruto: somar(valores),
+    // P/L líquido = bruto - corretagem (custo por contrato x total de operações, cada uma
+    // negocia 1 contrato) -- pedido de 2026-08-05.
+    plBruto: somar(valores) - resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO,
     numOperacoes: resolvidas.length,
     tempoMedio: media(duracoesTodas),
     tempoMaior: duracoesTodas.length ? Math.max(...duracoesTodas) : 0,
