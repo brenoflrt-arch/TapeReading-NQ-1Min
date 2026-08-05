@@ -222,19 +222,15 @@ function filtrarPorPeriodo(resolvidas, periodo) {
 }
 
 /** Resultado "de verdade" de uma operação -- pedido de 2026-08-05: agora prioriza o Resultado
- *  Ordem Limite (simula a entrada real do Ninja, que voltou a ser ordem limite na trava) sempre
- *  que ele existe e preencheu ("nao_preenchida" não conta); cai pro Resultado Entrada
- *  (resultado_real) nas operações sem dado de ordem limite; só cai pro Resultado Análise (nível
- *  teórico) como último recurso, quando não tem nem um nem outro. Antes disso (mesmo dia,
- *  correção anterior) priorizava resultado_real -- trocado porque a execução real passou a ser
- *  via ordem limite, então resultado_ordem_limite é o que mais se aproxima do que a conta real
- *  vai fazer daqui pra frente. */
+ *  Corrigido em 2026-08-05 (2ª vez, achado com um caso real de venda que executou e pagou lucro
+ *  na conta, mas nunca apareceu no site): o resumo estava priorizando Resultado Ordem Limite e
+ *  Resultado Análise -- SIMULAÇÕES que nunca viraram posição de verdade -- fazendo o site
+ *  "registrar" dezenas de operações que o Ninja nunca executou. Agora só conta resultado_real
+ *  (a lista `resolvidas` já vem filtrada pra só operações com preco_real_entrada preenchido de
+ *  verdade -- ver o filtro em atualizar()), então aqui é só o resultado real mesmo, sem
+ *  fallback pra simulação nenhuma. */
 function resultadoEfetivo(o) {
-  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
-    return o.resultado_ordem_limite;
-  }
-  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
-  return o.resultado;
+  return o.resultado_real;
 }
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
@@ -407,11 +403,17 @@ async function atualizar() {
       }
     }
 
+    // Corrigido em 2026-08-05: o resumo de performance só conta operações com preco_real_entrada
+    // preenchido de verdade (o Ninja realmente executou) e resultado_real já resolvido --
+    // resultado_ordem_limite e resultado (Resultado Análise) são simulações que confirmam o
+    // padrão sem nunca virar posição real, e contá-las inflava o número de "operações" do site
+    // bem acima do que realmente aconteceu na conta.
+    //
     // passaria_filtro_3min null = operação de antes dessa coluna existir (quando o filtro ainda
     // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
     // antigo quando o filtro simulado está selecionado.
     const resolvidas = [...operacoesSimuladas]
-      .filter((o) => o.status === "gain" || o.status === "stop")
+      .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
