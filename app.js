@@ -214,7 +214,7 @@ function celulaResultadoAnalise(op) {
   if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
   const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
-  return `<span class="tag-resultado ${classe}">${op.resultado} (${formatarDolar(valorDolar)})</span>`;
+  return `<span class="tag-resultado ${classe}">${formatarDolar(valorDolar)}</span>`;
 }
 
 // Resultado ENTRADA: o que a strategy real (ExecutorRegiaoReferenciaMNQ.cs) reportou de volta
