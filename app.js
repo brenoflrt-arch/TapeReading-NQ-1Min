@@ -8,6 +8,10 @@ const DOLAR_POR_PONTO_OPERACAO = 20;
 // líquido -- multiplica pelo total de operações resolvidas (cada uma negocia 1 contrato).
 const CUSTO_CORRETAGEM_POR_CONTRATO = 3.10;
 const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
+// Pedido de 2026-08-05: "zera" a tabela "Operações" pra começar a protocolar só do que acontecer
+// dali em diante -- não apaga nada no banco (a "Registros" continua com o histórico completo),
+// só corta a lista da tabela nova por data/hora de confirmação (criado_em).
+const OPERACOES_CORTE_INICIO = "2026-08-05T23:59:43.928778+00:00";
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -448,8 +452,10 @@ async function atualizar() {
     // Tabela nova "Operações" (lista separada, não influencia o resumo acima): só
     // Horário/Operação/Nível entrada/Negócios/Resultado Ordem Limite -- só entram aqui as que já
     // preencheram de verdade nesse modelo (lucro/prejuízo), não as "nao_preenchida" nem as ainda
-    // em aberto.
+    // em aberto. Só conta a partir de OPERACOES_CORTE_INICIO (pedido de 2026-08-05: "zerar" e
+    // começar a protocolar só do que acontecer dali em diante).
     const operacoesOrdemLimiteResolvidas = [...operacoesSimuladas]
+      .filter((o) => o.criado_em >= OPERACOES_CORTE_INICIO)
       .filter((o) => o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo")
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const operacoesRegistradas = operacoesOrdemLimiteResolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
