@@ -22,6 +22,42 @@
     </div>
   </section>
 
+  <section class="cartao">
+    <h2>Registros</h2>
+    <div class="protegido" id="protegido-operacoes" data-bloqueado="true">
+      <div class="tabela-rolavel">
+        <table class="tabela-padroes">
+          <thead>
+            <tr><th>Horário</th><th>Operação</th><th>Nível análise</th><th>Resultado análise</th></tr>
+          </thead>
+          <tbody id="corpo-tabela-operacoes-simuladas">
+            <tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pedido de 2026-08-05: produção roda SEM o filtro de formação mínima (3min) -- este
+           toggle compara "Real" (todas as operações, o que está acontecendo de fato na conta) vs
+           "Simulado com filtro 3min" (só o subconjunto que passaria nesse filtro, pra ver o que
+           teria acontecido se ele continuasse ligado). Movido pra dentro da área restrita e pro
+           fim da página -- só aparece logado, mesma trava da tabela de operações. -->
+      <div class="performance-abas performance-abas-filtro" id="performance-abas-filtro">
+        <button class="aba-filtro aba-filtro-ativa" data-filtro="real" type="button">Real (sem filtro)</button>
+        <button class="aba-filtro" data-filtro="com_filtro_3min" type="button">Simulado (com filtro 3min)</button>
+      </div>
+
+      <div class="bloqueio-login" id="bloqueio-login">
+        <form id="form-login" class="form-login">
+          <span class="bloqueio-titulo">Área restrita</span>
+          <input type="email" id="login-email" placeholder="e-mail" autocomplete="username" required />
+          <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" required />
+          <button type="submit">Entrar</button>
+          <span class="bloqueio-erro" id="bloqueio-erro"></span>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <section class="cartao cartao-performance">
     <div class="performance-tira">
       <div class="tira-item">
@@ -69,40 +105,57 @@
     <svg id="grafico-patrimonio" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
   </section>
 
-  <section class="cartao">
-    <h2>Registros</h2>
-    <div class="protegido" id="protegido-operacoes" data-bloqueado="true">
-      <div class="tabela-rolavel">
-        <table class="tabela-padroes">
-          <thead>
-            <tr><th>Horário</th><th>Operação</th><th>Nível análise</th><th>Resultado análise</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-operacoes-simuladas">
-            <tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
-          </tbody>
-        </table>
+  <!-- Pedido de 2026-08-06: clone do card de performance acima, mas contabilizando só o
+       Resultado Análise (a mesma coluna única que a tabela Registros mostra agora) em vez da
+       fórmula resultadoEfetivo/resultado_real do card original -- ver resumoResultadoAnalise no
+       app.js. Fica entre Registros e Operações, então lê literalmente o que está na tabela logo
+       acima. IDs com sufixo "-2" e classes "-2" nas abas de período pra não colidir com o
+       primeiro card (cada um tem seu próprio estado de período selecionado). -->
+  <section class="cartao cartao-performance">
+    <div class="performance-tira">
+      <div class="tira-item">
+        <span class="tira-rotulo">Resultado total</span>
+        <span class="tira-valor" id="perf-resultado-total-2">—</span>
       </div>
-
-      <!-- Pedido de 2026-08-05: produção roda SEM o filtro de formação mínima (3min) -- este
-           toggle compara "Real" (todas as operações, o que está acontecendo de fato na conta) vs
-           "Simulado com filtro 3min" (só o subconjunto que passaria nesse filtro, pra ver o que
-           teria acontecido se ele continuasse ligado). Movido pra dentro da área restrita e pro
-           fim da página -- só aparece logado, mesma trava da tabela de operações. -->
-      <div class="performance-abas performance-abas-filtro" id="performance-abas-filtro">
-        <button class="aba-filtro aba-filtro-ativa" data-filtro="real" type="button">Real (sem filtro)</button>
-        <button class="aba-filtro" data-filtro="com_filtro_3min" type="button">Simulado (com filtro 3min)</button>
+      <div class="tira-item">
+        <span class="tira-rotulo">Lucro bruto</span>
+        <span class="tira-valor" id="perf-lucro-bruto-2">—</span>
       </div>
-
-      <div class="bloqueio-login" id="bloqueio-login">
-        <form id="form-login" class="form-login">
-          <span class="bloqueio-titulo">Área restrita</span>
-          <input type="email" id="login-email" placeholder="e-mail" autocomplete="username" required />
-          <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" required />
-          <button type="submit">Entrar</button>
-          <span class="bloqueio-erro" id="bloqueio-erro"></span>
-        </form>
+      <div class="tira-item">
+        <span class="tira-rotulo">Prejuízo bruto</span>
+        <span class="tira-valor" id="perf-prejuizo-bruto-2">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações</span>
+        <span class="tira-valor" id="perf-operacoes-2">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Vencedoras</span>
+        <span class="tira-valor" id="perf-vencedoras-2">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações positivas</span>
+        <span class="tira-valor" id="perf-operacoes-positivas-2">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações negativas</span>
+        <span class="tira-valor" id="perf-operacoes-negativas-2">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Custos</span>
+        <span class="tira-valor" id="perf-custos-2">—</span>
       </div>
     </div>
+
+    <div class="performance-abas" id="performance-abas-2">
+      <button class="aba-periodo aba-periodo-2" data-periodo="diario" type="button">Diário</button>
+      <button class="aba-periodo aba-periodo-2" data-periodo="semanal" type="button">Semanal</button>
+      <button class="aba-periodo aba-periodo-2" data-periodo="mensal" type="button">Mensal</button>
+      <button class="aba-periodo aba-periodo-2 aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
+    </div>
+
+    <p class="performance-titulo-grafico">Patrimônio</p>
+    <svg id="grafico-patrimonio-2" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
   </section>
 
   <section class="cartao">

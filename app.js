@@ -105,7 +105,24 @@ const elementoPerf = {
   custos: document.getElementById("perf-custos"),
 };
 const elementoGraficoPatrimonio = document.getElementById("grafico-patrimonio");
-const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo");
+const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo:not(.aba-periodo-2)");
+
+// Pedido de 2026-08-06: 2º card de performance, clone do de cima -- fica entre Registros e
+// Operações, contabilizando só o Resultado Análise (a única coluna de resultado que a tabela
+// Registros mostra agora), não a fórmula resultadoEfetivo/resultado_real do card original. Tem
+// seu próprio período selecionado (independente do card 1).
+const elementoPerf2 = {
+  resultadoTotal: document.getElementById("perf-resultado-total-2"),
+  lucroBruto: document.getElementById("perf-lucro-bruto-2"),
+  prejuizoBruto: document.getElementById("perf-prejuizo-bruto-2"),
+  operacoes: document.getElementById("perf-operacoes-2"),
+  vencedoras: document.getElementById("perf-vencedoras-2"),
+  operacoesPositivas: document.getElementById("perf-operacoes-positivas-2"),
+  operacoesNegativas: document.getElementById("perf-operacoes-negativas-2"),
+  custos: document.getElementById("perf-custos-2"),
+};
+const elementoGraficoPatrimonio2 = document.getElementById("grafico-patrimonio-2");
+const elementosAbaPeriodo2 = document.querySelectorAll(".aba-periodo-2");
 
 // Pedido de 2026-08-05: filtro de período pro gráfico de patrimônio (estilo relatório do
 // NinjaTrader) -- "diario" pega só o dia calendário mais recente presente nos dados (não
@@ -116,6 +133,15 @@ elementosAbaPeriodo.forEach((botao) => {
   botao.addEventListener("click", () => {
     periodoSelecionado = botao.dataset.periodo;
     elementosAbaPeriodo.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
+    atualizar();
+  });
+});
+
+let periodoSelecionado2 = "total";
+elementosAbaPeriodo2.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    periodoSelecionado2 = botao.dataset.periodo;
+    elementosAbaPeriodo2.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
     atualizar();
   });
 });
@@ -247,6 +273,13 @@ function resultadoEfetivoDiario(o) {
   return o.resultado_real;
 }
 
+/** Pedido de 2026-08-06: usada só pelo 2º card de performance (entre Registros e Operações) --
+ *  conta APENAS o Resultado Análise (o campo `resultado`, mesma coluna única que a tabela
+ *  Registros mostra), pra todos os períodos igual, sem a fórmula em cascata do card original. */
+function resultadoAnalise(o) {
+  return o.resultado;
+}
+
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
  *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
 function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo) {
@@ -277,8 +310,7 @@ function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetiv
   };
 }
 
-function preencherTiraPerformance(resumo) {
-  const el = elementoPerf;
+function preencherTiraPerformance(el, resumo) {
   el.resultadoTotal.textContent = formatarDolar(resumo.resultadoTotal);
   el.resultadoTotal.className = "tira-valor " + (resumo.resultadoTotal >= 0 ? "positivo" : "negativo");
   el.lucroBruto.textContent = formatarDolar(resumo.lucroBruto);
@@ -306,7 +338,7 @@ function formatarEixoY(valor) {
 /** Gráfico de área do patrimônio acumulado, no estilo do relatório "Patrimônio" do NinjaTrader:
  *  linha + preenchimento em degradê, verde acima de zero e vermelho abaixo, eixo de preço à
  *  direita e datas no eixo X (posicionadas pelo tempo real decorrido, não por índice). */
-function desenharGraficoPatrimonio(curva) {
+function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
   const largura = 900;
   const altura = 340;
   const margemDireita = 70;
@@ -318,7 +350,7 @@ function desenharGraficoPatrimonio(curva) {
   const alturaUtil = altura - margemBaixo - margemCima;
 
   if (curva.length === 0) {
-    elementoGraficoPatrimonio.innerHTML = `
+    elementoSvg.innerHTML = `
       <text x="${largura / 2}" y="${altura / 2}" fill="#555" font-size="13" text-anchor="middle">
         nenhuma operação resolvida nesse período
       </text>`;
@@ -366,15 +398,15 @@ function desenharGraficoPatrimonio(curva) {
 
   const fracaoZero = Math.max(0, Math.min(1, (yZero - margemCima) / alturaUtil));
 
-  elementoGraficoPatrimonio.innerHTML = `
+  elementoSvg.innerHTML = `
     <defs>
-      <linearGradient id="areaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
+      <linearGradient id="areaPatrimonio${sufixoId}" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
         <stop offset="0" stop-color="#15803d" stop-opacity="0.5" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#15803d" stop-opacity="0.03" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" stop-opacity="0.03" />
         <stop offset="1" stop-color="#ef5350" stop-opacity="0.5" />
       </linearGradient>
-      <linearGradient id="linhaPatrimonio" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
+      <linearGradient id="linhaPatrimonio${sufixoId}" gradientUnits="userSpaceOnUse" x1="0" y1="${margemCima}" x2="0" y2="${margemCima + alturaUtil}">
         <stop offset="0" stop-color="#22c55e" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#22c55e" />
         <stop offset="${fracaoZero.toFixed(3)}" stop-color="#ef5350" />
@@ -383,8 +415,8 @@ function desenharGraficoPatrimonio(curva) {
     </defs>
     ${grade}
     <line x1="0" y1="${yZero.toFixed(1)}" x2="${larguraUtil}" y2="${yZero.toFixed(1)}" stroke="#333333" stroke-width="1" />
-    <path d="${caminhoArea}" fill="url(#areaPatrimonio)" stroke="none" />
-    <path d="${caminhoLinha}" fill="none" stroke="url(#linhaPatrimonio)" stroke-width="1.75" />
+    <path d="${caminhoArea}" fill="url(#areaPatrimonio${sufixoId})" stroke="none" />
+    <path d="${caminhoLinha}" fill="none" stroke="url(#linhaPatrimonio${sufixoId})" stroke-width="1.75" />
     ${rotulosData}
   `;
 }
@@ -440,8 +472,21 @@ async function atualizar() {
       resolvidasNoPeriodo,
       periodoSelecionado === "diario" ? resultadoEfetivoDiario : resultadoEfetivo,
     );
-    preencherTiraPerformance(resumo);
-    desenharGraficoPatrimonio(resumo.curva);
+    preencherTiraPerformance(elementoPerf, resumo);
+    desenharGraficoPatrimonio(elementoGraficoPatrimonio, resumo.curva);
+
+    // Pedido de 2026-08-06: 2º card de performance (entre Registros e Operações) -- conta só o
+    // Resultado Análise (a única coluna de resultado que a tabela Registros mostra), igual pra
+    // todos os períodos (sem o caso especial "diario" do card 1, que não se aplica aqui já que
+    // não existe execução real na Resultado Análise).
+    const resolvidasAnalise = [...operacoesSimuladas]
+      .filter((o) => o.status === "gain" || o.status === "stop")
+      .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
+      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    const resolvidasAnaliseNoPeriodo = filtrarPorPeriodo(resolvidasAnalise, periodoSelecionado2);
+    const resumo2 = calcularResumoPerformance(resolvidasAnaliseNoPeriodo, resultadoAnalise);
+    preencherTiraPerformance(elementoPerf2, resumo2);
+    desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo2.curva, "2");
 
     // Tabela nova "Operações" (lista separada, não influencia o resumo acima): pedido de
     // 2026-08-05 (2ª vez) -- agora é baseada em EXECUÇÃO REAL (preco_real_entrada preenchido e
