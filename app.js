@@ -475,11 +475,10 @@ async function atualizar() {
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
           <td>${formatarPreco(o.preco_real_entrada)}</td>
-          <td>${o.negocios_acumulados ?? "—"}</td>
           <td>${celulaResultadoEntrada(o)}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>';
+      : '<tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>';
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
