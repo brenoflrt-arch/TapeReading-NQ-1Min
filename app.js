@@ -241,18 +241,15 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-/** Resultado "de verdade" de uma operação -- revertido em 2026-08-05 (5ª vez) de volta pra
- *  fórmula aprovada: prioriza Resultado Ordem Limite quando existe e preencheu, cai pro
- *  Resultado Entrada (resultado_real) sem ordem limite, só cai pro Resultado Análise como último
- *  recurso. O resumo/gráfico do topo usa ISSO pra TODO o histórico -- não muda mais daqui. A
- *  tabela "Operações" (separada da "Registros") é só uma lista adicional, não influencia essa
- *  conta. */
+/** Resultado "de verdade" de uma operação -- corrigido em 2026-08-05 (6ª vez, motivo real dessa
+ *  vez: aba Diário somava Resultado Ordem Limite/Análise de padrões que NUNCA viraram posição
+ *  real junto com as operações reais, dando -1.221,70 quando a conta real só tinha -409,30). Só
+ *  conta resultado_real -- a lista `resolvidas` já vem filtrada só pra quem tem preco_real_entrada
+ *  preenchido (ver atualizar()), então aqui é direto, sem fallback pra simulação nenhuma.
+ *  Semanal/Mensal/Todo período ficam com menos operações (só o que realmente executou no Ninja),
+ *  mas é o número verdadeiro. */
 function resultadoEfetivo(o) {
-  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
-    return o.resultado_ordem_limite;
-  }
-  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
-  return o.resultado;
+  return o.resultado_real;
 }
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
@@ -434,10 +431,11 @@ async function atualizar() {
     // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
     // antigo quando o filtro simulado está selecionado.
     //
-    // Resumo/gráfico do topo: fórmula aprovada, sem mudar -- resultadoEfetivo (ordem limite ->
-    // entrada -> análise) em cima de TODAS as operações com Resultado Análise resolvido.
+    // Resumo/gráfico do topo: corrigido em 2026-08-05 (6ª vez) -- só conta operações com
+    // execução REAL (preco_real_entrada preenchido + resultado_real resolvido), pra bater com o
+    // extrato de verdade do Ninja. Nada de Resultado Ordem Limite/Análise aqui.
     const resolvidas = [...operacoesSimuladas]
-      .filter((o) => o.status === "gain" || o.status === "stop")
+      .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
