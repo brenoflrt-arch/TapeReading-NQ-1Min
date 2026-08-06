@@ -463,10 +463,12 @@ async function atualizar() {
     const operacoesReaisResolvidas = filtrarPorPeriodo(
       [...operacoesSimuladas]
         .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
-        .sort((a, b) => a.criado_em.localeCompare(b.criado_em)),
+        .sort((a, b) => a.criado_em.localeCompare(b.criado_em)), // ordem crescente exigida por filtrarPorPeriodo
       "diario",
     );
-    const operacoesRegistradas = operacoesReaisResolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    // Pedido de 2026-08-06: mais recente primeiro na exibição -- inverte só aqui, depois do
+    // filtro de período (que precisa da ordem crescente pra achar a "mais recente" certa).
+    const operacoesRegistradas = [...operacoesReaisResolvidas].reverse().slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoes.innerHTML = operacoesRegistradas.length
       ? operacoesRegistradas.map((o) => `
         <tr>
