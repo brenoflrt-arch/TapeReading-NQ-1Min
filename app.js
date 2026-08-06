@@ -241,21 +241,28 @@ function filtrarPorPeriodo(resolvidas, periodo) {
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
 
-/** Resultado "de verdade" de uma operação -- corrigido em 2026-08-05 (6ª vez, motivo real dessa
- *  vez: aba Diário somava Resultado Ordem Limite/Análise de padrões que NUNCA viraram posição
- *  real junto com as operações reais, dando -1.221,70 quando a conta real só tinha -409,30). Só
- *  conta resultado_real -- a lista `resolvidas` já vem filtrada só pra quem tem preco_real_entrada
- *  preenchido (ver atualizar()), então aqui é direto, sem fallback pra simulação nenhuma.
- *  Semanal/Mensal/Todo período ficam com menos operações (só o que realmente executou no Ninja),
- *  mas é o número verdadeiro. */
+/** Resultado "de verdade" de uma operação -- fórmula original (Ordem Limite -> Entrada ->
+ *  Análise), usada pelas abas Semanal/Mensal/Todo período, sem mudar. A aba Diário usa uma
+ *  fórmula diferente (só resultado_real) -- ver resultadoEfetivoDiario e atualizar(). */
 function resultadoEfetivo(o) {
+  if (o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo") {
+    return o.resultado_ordem_limite;
+  }
+  if (o.preco_real_entrada != null && o.resultado_real != null) return o.resultado_real;
+  return o.resultado;
+}
+
+/** Corrigido em 2026-08-05: só pra aba Diário -- Resultado Ordem Limite/Análise de padrões que
+ *  NUNCA viraram posição real estava entrando na conta junto com as operações reais, dando
+ *  -1.221,70 quando a conta real do dia só tinha -409,30. Só conta resultado_real. */
+function resultadoEfetivoDiario(o) {
   return o.resultado_real;
 }
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
  *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
-function calcularResumoPerformance(resolvidas) {
-  const comResultado = resolvidas.map((o) => ({ o, resultado: resultadoEfetivo(o) }));
+function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo) {
+  const comResultado = resolvidas.map((o) => ({ o, resultado: funcaoResultado(o) }));
   const gains = comResultado.filter((x) => x.resultado === "lucro");
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
   const valoresGain = gains.map(() => DOLAR_POR_PONTO_OPERACAO * 20);
@@ -431,15 +438,20 @@ async function atualizar() {
     // estava ligado de verdade em produção) -- conta como "passaria" pra não sumir do histórico
     // antigo quando o filtro simulado está selecionado.
     //
-    // Resumo/gráfico do topo: corrigido em 2026-08-05 (6ª vez) -- só conta operações com
-    // execução REAL (preco_real_entrada preenchido + resultado_real resolvido), pra bater com o
-    // extrato de verdade do Ninja. Nada de Resultado Ordem Limite/Análise aqui.
-    const resolvidas = [...operacoesSimuladas]
-      .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
+    // Corrigido em 2026-08-05: só a aba DIÁRIO usa resultado_real puro (pra bater com o extrato
+    // do Ninja) -- Semanal/Mensal/Todo período continuam com a fórmula original
+    // (resultadoEfetivo: Ordem Limite -> Entrada -> Análise), sem mudar.
+    const baseParaResumo = periodoSelecionado === "diario"
+      ? [...operacoesSimuladas].filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
+      : [...operacoesSimuladas].filter((o) => o.status === "gain" || o.status === "stop");
+    const resolvidas = baseParaResumo
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado);
-    const resumo = calcularResumoPerformance(resolvidasNoPeriodo);
+    const resumo = calcularResumoPerformance(
+      resolvidasNoPeriodo,
+      periodoSelecionado === "diario" ? resultadoEfetivoDiario : resultadoEfetivo,
+    );
     preencherTiraPerformance(resumo);
     desenharGraficoPatrimonio(resumo.curva);
 
