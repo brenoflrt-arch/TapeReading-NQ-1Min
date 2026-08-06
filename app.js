@@ -201,18 +201,6 @@ function celulaResultadoEntrada(op) {
   return `<span class="tag-resultado ${classe}">${op.resultado_real}</span>`;
 }
 
-// Resultado ORDEM LIMITE: simulação separada do analisador_tentativas_pequenas.py, não afeta
-// execução real nenhuma (que voltou a ser a mercado) -- calcula o que teria acontecido se a
-// entrada fosse uma ordem limite parada no nível de análise, esperando o preço genuinamente
-// retornar até lá. "nao_preenchida" = o preço se estendeu demais antes de voltar (nunca
-// preencheria); null = ainda em andamento (preenchida ou não, esperando resolver).
-function celulaResultadoOrdemLimite(op) {
-  if (op.resultado_ordem_limite === "nao_preenchida") return '<span class="detalhe-leve">—</span>';
-  if (op.resultado_ordem_limite == null) return '<span class="tag-resultado aberta">em aberto</span>';
-  const classe = op.resultado_ordem_limite === "lucro" ? "lucro" : "prejuizo";
-  return `<span class="tag-resultado ${classe}">${op.resultado_ordem_limite}</span>`;
-}
-
 // ---- Gráfico de performance (estilo relatório "Patrimônio" do NinjaTrader) ----
 
 function somar(lista) {
@@ -487,14 +475,10 @@ async function atualizar() {
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
           <td>${formatarPreco(o.preco_entrada)}</td>
-          <td>${o.preco_real_entrada != null ? formatarPreco(o.preco_real_entrada) : "—"}</td>
-          <td>${o.negocios_acumulados ?? "—"}</td>
           <td>${celulaResultadoAnalise(o)}</td>
-          <td>${celulaResultadoEntrada(o)}</td>
-          <td>${celulaResultadoOrdemLimite(o)}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="8" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
+      : '<tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>';
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
