@@ -8,10 +8,6 @@ const DOLAR_POR_PONTO_OPERACAO = 20;
 // líquido -- multiplica pelo total de operações resolvidas (cada uma negocia 1 contrato).
 const CUSTO_CORRETAGEM_POR_CONTRATO = 3.10;
 const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
-// Pedido de 2026-08-05: "zera" a tabela "Operações" pra começar a protocolar só do que acontecer
-// dali em diante -- não apaga nada no banco (a "Registros" continua com o histórico completo),
-// só corta a lista da tabela nova por data/hora de confirmação (criado_em).
-const OPERACOES_CORTE_INICIO = "2026-08-05T23:59:43.928778+00:00";
 
 const elementoStatus = document.getElementById("status");
 const elementoPrecoValor = document.getElementById("preco-valor");
@@ -449,27 +445,29 @@ async function atualizar() {
     preencherTiraPerformance(resumo);
     desenharGraficoPatrimonio(resumo.curva);
 
-    // Tabela nova "Operações" (lista separada, não influencia o resumo acima): só
-    // Horário/Operação/Nível entrada/Negócios/Resultado Ordem Limite -- só entram aqui as que já
-    // preencheram de verdade nesse modelo (lucro/prejuízo), não as "nao_preenchida" nem as ainda
-    // em aberto. Só conta a partir de OPERACOES_CORTE_INICIO (pedido de 2026-08-05: "zerar" e
-    // começar a protocolar só do que acontecer dali em diante).
-    const operacoesOrdemLimiteResolvidas = [...operacoesSimuladas]
-      .filter((o) => o.criado_em >= OPERACOES_CORTE_INICIO)
-      .filter((o) => o.resultado_ordem_limite === "lucro" || o.resultado_ordem_limite === "prejuizo")
-      .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
-    const operacoesRegistradas = operacoesOrdemLimiteResolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
+    // Tabela nova "Operações" (lista separada, não influencia o resumo acima): pedido de
+    // 2026-08-05 (2ª vez) -- agora é baseada em EXECUÇÃO REAL (preco_real_entrada preenchido e
+    // resultado_real resolvido), não mais Resultado Ordem Limite, pra bater exatamente com o
+    // extrato do Ninja. Só mostra "hoje" (19h até agora/18h de amanhã, mesmo corte de sessão da
+    // aba Diário).
+    const operacoesReaisResolvidas = filtrarPorPeriodo(
+      [...operacoesSimuladas]
+        .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
+        .sort((a, b) => a.criado_em.localeCompare(b.criado_em)),
+      "diario",
+    );
+    const operacoesRegistradas = operacoesReaisResolvidas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoes.innerHTML = operacoesRegistradas.length
       ? operacoesRegistradas.map((o) => `
         <tr>
           <td>${o.horario_entrada.slice(0, 8)}</td>
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
-          <td>${formatarPreco(o.preco_entrada)}</td>
+          <td>${formatarPreco(o.preco_real_entrada)}</td>
           <td>${o.negocios_acumulados ?? "—"}</td>
-          <td>${celulaResultadoOrdemLimite(o)}</td>
+          <td>${celulaResultadoEntrada(o)}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda</td></tr>';
+      : '<tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>';
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
