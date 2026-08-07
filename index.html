@@ -181,6 +181,34 @@
       </div>
     </div>
   </section>
+
+  <!-- Pedido de 2026-08-07: MNQ rodando em paralelo ao NQ, a MERCADO (não ordem limite),
+       validação 5/5/2,5 -- tabela separada (operacoes_mnq_mercado) pra não misturar com o NQ.
+       Mesma sessão de login compartilhada das outras áreas restritas. -->
+  <section class="cartao">
+    <h2>Registro Operação a Mercado MNQ</h2>
+    <div class="protegido" id="protegido-mnq-mercado" data-bloqueado="true">
+      <div class="tabela-rolavel">
+        <table class="tabela-padroes">
+          <thead>
+            <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado</th></tr>
+          </thead>
+          <tbody id="corpo-tabela-mnq-mercado">
+            <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bloqueio-login" id="bloqueio-login-mnq-mercado">
+        <form id="form-login-mnq-mercado" class="form-login">
+          <span class="bloqueio-titulo">Área restrita</span>
+          <input type="email" id="login-email-mnq-mercado" placeholder="e-mail" autocomplete="username" required />
+          <input type="password" id="login-senha-mnq-mercado" placeholder="senha" autocomplete="current-password" required />
+          <button type="submit">Entrar</button>
+          <span class="bloqueio-erro" id="bloqueio-erro-mnq-mercado"></span>
+        </form>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

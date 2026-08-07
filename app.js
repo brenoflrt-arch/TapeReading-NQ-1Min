@@ -14,6 +14,7 @@ const elementoPrecoValor = document.getElementById("preco-valor");
 const elementoPrecoHorario = document.getElementById("preco-horario");
 const elementoCorpoTabelaOperacoesSimuladas = document.getElementById("corpo-tabela-operacoes-simuladas");
 const elementoCorpoTabelaOperacoes = document.getElementById("corpo-tabela-operacoes");
+const elementoCorpoTabelaMnqMercado = document.getElementById("corpo-tabela-mnq-mercado");
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 const elementoBotaoSom = document.getElementById("botao-som");
 
@@ -35,9 +36,18 @@ const elementoLoginEmailOperacoes = document.getElementById("login-email-operaco
 const elementoLoginSenhaOperacoes = document.getElementById("login-senha-operacoes");
 const elementoBloqueioErroOperacoes = document.getElementById("bloqueio-erro-operacoes");
 
+// Pedido de 2026-08-07: 3ª área restrita (MNQ a mercado) -- mesma sessão compartilhada das
+// outras duas.
+const elementoProtegidoMnqMercado = document.getElementById("protegido-mnq-mercado");
+const elementoFormLoginMnqMercado = document.getElementById("form-login-mnq-mercado");
+const elementoLoginEmailMnqMercado = document.getElementById("login-email-mnq-mercado");
+const elementoLoginSenhaMnqMercado = document.getElementById("login-senha-mnq-mercado");
+const elementoBloqueioErroMnqMercado = document.getElementById("bloqueio-erro-mnq-mercado");
+
 function atualizarBloqueio(sessao) {
   elementoProtegidoOperacoes.dataset.bloqueado = sessao ? "false" : "true";
   elementoProtegidoOperacoesNovas.dataset.bloqueado = sessao ? "false" : "true";
+  elementoProtegidoMnqMercado.dataset.bloqueado = sessao ? "false" : "true";
 }
 
 supabaseCliente.auth.getSession().then(({ data }) => atualizarBloqueio(data.session));
@@ -64,6 +74,13 @@ elementoFormLoginOperacoes.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   if (await tentarLogin(elementoLoginEmailOperacoes.value, elementoLoginSenhaOperacoes.value, elementoBloqueioErroOperacoes)) {
     elementoLoginSenhaOperacoes.value = "";
+  }
+});
+
+elementoFormLoginMnqMercado.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  if (await tentarLogin(elementoLoginEmailMnqMercado.value, elementoLoginSenhaMnqMercado.value, elementoBloqueioErroMnqMercado)) {
+    elementoLoginSenhaMnqMercado.value = "";
   }
 });
 
@@ -194,6 +211,19 @@ async function buscarOperacoesSimuladas() {
     .select("id,operacao,preco_entrada,preco_real_entrada,negocios_acumulados,status,resultado,resultado_real,resultado_ordem_limite,resultado_pontos,horario_entrada,horario_resultado,criado_em,passaria_filtro_3min")
     .not("status", "in", "(cancelada,descartada)") // ruído de referências que nunca confirmaram -- não interessa aqui
     .order("criado_em", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+/** Pedido de 2026-08-07: MNQ rodando em paralelo ao NQ, a MERCADO, tabela separada (não mistura
+ *  com operacoes_simuladas_pequenas, que é só o NQ) -- vem do analisador_mnq_mercado.py. */
+async function buscarOperacoesMnqMercado() {
+  const { data, error } = await supabaseCliente
+    .from("operacoes_mnq_mercado")
+    .select("id,operacao,preco_entrada,preco_real_entrada,status,resultado,resultado_real,resultado_pontos,horario_entrada,horario_resultado,criado_em")
+    .not("status", "in", "(cancelada,descartada)")
+    .order("criado_em", { ascending: false })
+    .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
   if (error) throw error;
   return data;
 }
@@ -429,9 +459,10 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
 
 async function atualizar() {
   try {
-    const [precoAtual, operacoesSimuladas] = await Promise.all([
+    const [precoAtual, operacoesSimuladas, operacoesMnqMercado] = await Promise.all([
       buscarPrecoAtual(),
       buscarOperacoesSimuladas(),
+      buscarOperacoesMnqMercado(),
     ]);
 
     if (!precoAtual) {
@@ -519,6 +550,19 @@ async function atualizar() {
         </tr>
       `).join("")
       : '<tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>';
+
+    // Pedido de 2026-08-07: MNQ a mercado, tabela separada -- já vem mais recente primeiro
+    // (order criado_em desc na busca), sem filtro de período (mostra tudo até o limite).
+    elementoCorpoTabelaMnqMercado.innerHTML = operacoesMnqMercado.length
+      ? operacoesMnqMercado.map((o) => `
+        <tr>
+          <td>${o.horario_entrada.slice(0, 8)}</td>
+          <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
+          <td>${formatarPreco(o.preco_real_entrada != null ? o.preco_real_entrada : o.preco_entrada)}</td>
+          <td>${celulaResultadoEntrada(o)}</td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda</td></tr>';
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
