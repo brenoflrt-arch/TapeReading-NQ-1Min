@@ -355,29 +355,31 @@ tbody tr:hover td {
 
 /* ---- área restrita (tabela de operações) ---- */
 
-.protegido {
+/* Pedido de 2026-08-07: um único bloqueio cobre a página inteira (preço, performance e
+   tabelas) -- antes só as tabelas embaixo eram protegidas. .conteudo-protegido embrulha TUDO
+   dentro de <main> e o formulário fica fixo em tela cheia (não mais preso a uma seção). */
+.protegido-total {
   position: relative;
 }
 
-.protegido[data-bloqueado="true"] .tabela-rolavel,
-.protegido[data-bloqueado="true"] .performance-abas-filtro {
-  filter: blur(6px);
+.protegido-total[data-bloqueado="true"] .conteudo-protegido {
+  filter: blur(8px);
   pointer-events: none;
   user-select: none;
 }
 
-.bloqueio-login {
+.bloqueio-login-total {
   display: none;
 }
 
-.protegido[data-bloqueado="true"] .bloqueio-login {
+.protegido-total[data-bloqueado="true"] .bloqueio-login-total {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 50;
 }
 
 .form-login {

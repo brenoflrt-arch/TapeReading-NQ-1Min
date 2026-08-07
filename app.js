@@ -18,36 +18,20 @@ const elementoCorpoTabelaMnqMercado = document.getElementById("corpo-tabela-mnq-
 const elementoGraficoAcumulado = document.getElementById("grafico-acumulado");
 const elementoBotaoSom = document.getElementById("botao-som");
 
-// ---- Área restrita (tabelas ficam borradas até logar, pedido de 2026-08-04 -- e desde
-// 2026-08-05 são DUAS tabelas, "Operações" e "Registros", com um formulário de login cada, mas
-// as duas compartilham a MESMA sessão do Supabase Auth -- logar em qualquer uma libera as duas).
-// Mesmo login já usado na "Área restrita" do painel MNPK, mesmo projeto Supabase -- a sessão
-// persiste sozinha (supabase-js guarda em localStorage), então só pede login de novo se a
-// sessão expirar ou o usuário nunca tiver logado nesse navegador.
-const elementoProtegidoOperacoes = document.getElementById("protegido-operacoes");
+// ---- Área restrita (pedido de 2026-08-07: a página INTEIRA fica borrada até logar -- antes só
+// as 3 tabelas de baixo eram protegidas, preço e performance ficavam públicos). Um único
+// elemento (.protegido-total) e um único formulário cobrem tudo agora, em vez de 3 áreas
+// separadas com login duplicado. Mesmo login já usado na "Área restrita" do painel MNPK, mesmo
+// projeto Supabase -- a sessão persiste sozinha (supabase-js guarda em localStorage), então só
+// pede login de novo se a sessão expirar ou o usuário nunca tiver logado nesse navegador.
+const elementoProtegidoTotal = document.getElementById("protegido-total");
 const elementoFormLogin = document.getElementById("form-login");
 const elementoLoginEmail = document.getElementById("login-email");
 const elementoLoginSenha = document.getElementById("login-senha");
 const elementoBloqueioErro = document.getElementById("bloqueio-erro");
 
-const elementoProtegidoOperacoesNovas = document.getElementById("protegido-operacoes-novas");
-const elementoFormLoginOperacoes = document.getElementById("form-login-operacoes");
-const elementoLoginEmailOperacoes = document.getElementById("login-email-operacoes");
-const elementoLoginSenhaOperacoes = document.getElementById("login-senha-operacoes");
-const elementoBloqueioErroOperacoes = document.getElementById("bloqueio-erro-operacoes");
-
-// Pedido de 2026-08-07: 3ª área restrita (MNQ a mercado) -- mesma sessão compartilhada das
-// outras duas.
-const elementoProtegidoMnqMercado = document.getElementById("protegido-mnq-mercado");
-const elementoFormLoginMnqMercado = document.getElementById("form-login-mnq-mercado");
-const elementoLoginEmailMnqMercado = document.getElementById("login-email-mnq-mercado");
-const elementoLoginSenhaMnqMercado = document.getElementById("login-senha-mnq-mercado");
-const elementoBloqueioErroMnqMercado = document.getElementById("bloqueio-erro-mnq-mercado");
-
 function atualizarBloqueio(sessao) {
-  elementoProtegidoOperacoes.dataset.bloqueado = sessao ? "false" : "true";
-  elementoProtegidoOperacoesNovas.dataset.bloqueado = sessao ? "false" : "true";
-  elementoProtegidoMnqMercado.dataset.bloqueado = sessao ? "false" : "true";
+  elementoProtegidoTotal.dataset.bloqueado = sessao ? "false" : "true";
 }
 
 supabaseCliente.auth.getSession().then(({ data }) => atualizarBloqueio(data.session));
@@ -67,20 +51,6 @@ elementoFormLogin.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   if (await tentarLogin(elementoLoginEmail.value, elementoLoginSenha.value, elementoBloqueioErro)) {
     elementoLoginSenha.value = "";
-  }
-});
-
-elementoFormLoginOperacoes.addEventListener("submit", async (evento) => {
-  evento.preventDefault();
-  if (await tentarLogin(elementoLoginEmailOperacoes.value, elementoLoginSenhaOperacoes.value, elementoBloqueioErroOperacoes)) {
-    elementoLoginSenhaOperacoes.value = "";
-  }
-});
-
-elementoFormLoginMnqMercado.addEventListener("submit", async (evento) => {
-  evento.preventDefault();
-  if (await tentarLogin(elementoLoginEmailMnqMercado.value, elementoLoginSenhaMnqMercado.value, elementoBloqueioErroMnqMercado)) {
-    elementoLoginSenhaMnqMercado.value = "";
   }
 });
 

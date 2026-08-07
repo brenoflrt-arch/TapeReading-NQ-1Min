@@ -13,7 +13,12 @@
   <div class="status" id="status">conectando…</div>
 </header>
 
-<main>
+<!-- Pedido de 2026-08-07: TODA a página passou a exigir login (antes só as 3 tabelas embaixo
+     eram protegidas; preço/performance ficavam públicos). Um único bloqueio (.protegido-total)
+     cobre tudo dentro de <main>, com um único formulário de login sobreposto em tela cheia
+     (position:fixed), em vez das 3 áreas restritas separadas que existiam antes. -->
+<main class="protegido-total" id="protegido-total" data-bloqueado="true">
+  <div class="conteudo-protegido">
   <section class="hero">
     <div class="hero-preco">
       <span class="hero-rotulo">NQ agora</span>
@@ -76,37 +81,24 @@
 
   <section class="cartao">
     <h2>Registros</h2>
-    <div class="protegido" id="protegido-operacoes" data-bloqueado="true">
-      <div class="tabela-rolavel">
-        <table class="tabela-padroes">
-          <thead>
-            <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado Operação</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-operacoes-simuladas">
-            <tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="tabela-rolavel">
+      <table class="tabela-padroes">
+        <thead>
+          <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado Operação</th></tr>
+        </thead>
+        <tbody id="corpo-tabela-operacoes-simuladas">
+          <tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Pedido de 2026-08-05: produção roda SEM o filtro de formação mínima (3min) -- este
-           toggle compara "Real" (todas as operações, o que está acontecendo de fato na conta) vs
-           "Simulado com filtro 3min" (só o subconjunto que passaria nesse filtro, pra ver o que
-           teria acontecido se ele continuasse ligado). Movido pra dentro da área restrita e pro
-           fim da página -- só aparece logado, mesma trava da tabela de operações. -->
-      <div class="performance-abas performance-abas-filtro" id="performance-abas-filtro">
-        <button class="aba-filtro aba-filtro-ativa" data-filtro="real" type="button">Real (sem filtro)</button>
-        <button class="aba-filtro" data-filtro="com_filtro_3min" type="button">Simulado (com filtro 3min)</button>
-      </div>
-
-      <div class="bloqueio-login" id="bloqueio-login">
-        <form id="form-login" class="form-login">
-          <span class="bloqueio-titulo">Área restrita</span>
-          <input type="email" id="login-email" placeholder="e-mail" autocomplete="username" required />
-          <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" required />
-          <button type="submit">Entrar</button>
-          <span class="bloqueio-erro" id="bloqueio-erro"></span>
-        </form>
-      </div>
+    <!-- Pedido de 2026-08-05: produção roda SEM o filtro de formação mínima (3min) -- este
+         toggle compara "Real" (todas as operações, o que está acontecendo de fato na conta) vs
+         "Simulado com filtro 3min" (só o subconjunto que passaria nesse filtro, pra ver o que
+         teria acontecido se ele continuasse ligado). -->
+    <div class="performance-abas performance-abas-filtro" id="performance-abas-filtro">
+      <button class="aba-filtro aba-filtro-ativa" data-filtro="real" type="button">Real (sem filtro)</button>
+      <button class="aba-filtro" data-filtro="com_filtro_3min" type="button">Simulado (com filtro 3min)</button>
     </div>
   </section>
 
@@ -159,56 +151,45 @@
 
   <section class="cartao">
     <h2>Operações</h2>
-    <div class="protegido" id="protegido-operacoes-novas" data-bloqueado="true">
-      <div class="tabela-rolavel">
-        <table class="tabela-padroes">
-          <thead>
-            <tr><th>Horário</th><th>Operação</th><th>Nível entrada</th><th>Resultado entrada</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-operacoes">
-            <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="bloqueio-login" id="bloqueio-login-operacoes">
-        <form id="form-login-operacoes" class="form-login">
-          <span class="bloqueio-titulo">Área restrita</span>
-          <input type="email" id="login-email-operacoes" placeholder="e-mail" autocomplete="username" required />
-          <input type="password" id="login-senha-operacoes" placeholder="senha" autocomplete="current-password" required />
-          <button type="submit">Entrar</button>
-          <span class="bloqueio-erro" id="bloqueio-erro-operacoes"></span>
-        </form>
-      </div>
+    <div class="tabela-rolavel">
+      <table class="tabela-padroes">
+        <thead>
+          <tr><th>Horário</th><th>Operação</th><th>Nível entrada</th><th>Resultado entrada</th></tr>
+        </thead>
+        <tbody id="corpo-tabela-operacoes">
+          <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
   <!-- Pedido de 2026-08-07: MNQ rodando em paralelo ao NQ, a MERCADO (não ordem limite),
-       validação 5/5/2,5 -- tabela separada (operacoes_mnq_mercado) pra não misturar com o NQ.
-       Mesma sessão de login compartilhada das outras áreas restritas. -->
+       validação 5/5/5 (espelha o NQ) -- tabela separada (operacoes_mnq_mercado) pra não misturar
+       com o NQ. -->
   <section class="cartao">
     <h2>Registro Operação a Mercado MNQ</h2>
-    <div class="protegido" id="protegido-mnq-mercado" data-bloqueado="true">
-      <div class="tabela-rolavel">
-        <table class="tabela-padroes">
-          <thead>
-            <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado</th></tr>
-          </thead>
-          <tbody id="corpo-tabela-mnq-mercado">
-            <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="bloqueio-login" id="bloqueio-login-mnq-mercado">
-        <form id="form-login-mnq-mercado" class="form-login">
-          <span class="bloqueio-titulo">Área restrita</span>
-          <input type="email" id="login-email-mnq-mercado" placeholder="e-mail" autocomplete="username" required />
-          <input type="password" id="login-senha-mnq-mercado" placeholder="senha" autocomplete="current-password" required />
-          <button type="submit">Entrar</button>
-          <span class="bloqueio-erro" id="bloqueio-erro-mnq-mercado"></span>
-        </form>
-      </div>
+    <div class="tabela-rolavel">
+      <table class="tabela-padroes">
+        <thead>
+          <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado</th></tr>
+        </thead>
+        <tbody id="corpo-tabela-mnq-mercado">
+          <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
+  </div>
+
+  <div class="bloqueio-login-total" id="bloqueio-login">
+    <form id="form-login" class="form-login">
+      <span class="bloqueio-titulo">Área restrita</span>
+      <input type="email" id="login-email" placeholder="e-mail" autocomplete="username" required />
+      <input type="password" id="login-senha" placeholder="senha" autocomplete="current-password" required />
+      <button type="submit">Entrar</button>
+      <span class="bloqueio-erro" id="bloqueio-erro"></span>
+    </form>
+  </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
