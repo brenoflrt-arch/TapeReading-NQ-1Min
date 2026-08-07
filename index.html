@@ -163,6 +163,58 @@
     </div>
   </section>
 
+  <!-- Pedido de 2026-08-07 (2ª vez): card de performance com os dados da tabela MNQ a mercado
+       (operacoes_mnq_mercado), entre a tabela Operações e a tabela Registro Operação a Mercado
+       MNQ. Mesmo padrão dos outros 2 cards de performance, mas usa resultado_real diretamente
+       (única coluna de resultado que essa tabela tem, sem a cascata ordem-limite/análise do NQ) e
+       $2/ponto do MNQ (não $20 do NQ) -- ver DOLAR_POR_PONTO_MNQ no app.js. -->
+  <section class="cartao cartao-performance">
+    <div class="performance-tira">
+      <div class="tira-item">
+        <span class="tira-rotulo">Resultado total</span>
+        <span class="tira-valor" id="perf-resultado-total-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Lucro bruto</span>
+        <span class="tira-valor" id="perf-lucro-bruto-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Prejuízo bruto</span>
+        <span class="tira-valor" id="perf-prejuizo-bruto-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações</span>
+        <span class="tira-valor" id="perf-operacoes-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Vencedoras</span>
+        <span class="tira-valor" id="perf-vencedoras-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações positivas</span>
+        <span class="tira-valor" id="perf-operacoes-positivas-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Operações negativas</span>
+        <span class="tira-valor" id="perf-operacoes-negativas-mnq">—</span>
+      </div>
+      <div class="tira-item">
+        <span class="tira-rotulo">Custos</span>
+        <span class="tira-valor" id="perf-custos-mnq">—</span>
+      </div>
+    </div>
+
+    <div class="performance-abas" id="performance-abas-mnq">
+      <button class="aba-periodo aba-periodo-mnq" data-periodo="diario" type="button">Diário</button>
+      <button class="aba-periodo aba-periodo-mnq" data-periodo="semanal" type="button">Semanal</button>
+      <button class="aba-periodo aba-periodo-mnq" data-periodo="mensal" type="button">Mensal</button>
+      <button class="aba-periodo aba-periodo-mnq aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
+    </div>
+
+    <p class="performance-titulo-grafico">Patrimônio MNQ a Mercado</p>
+    <svg id="grafico-patrimonio-mnq" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
+  </section>
+
   <!-- Pedido de 2026-08-07: MNQ rodando em paralelo ao NQ, a MERCADO (não ordem limite),
        validação 5/5/5 (espelha o NQ) -- tabela separada (operacoes_mnq_mercado) pra não misturar
        com o NQ. -->

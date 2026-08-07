@@ -4,6 +4,9 @@ const INTERVALO_ATUALIZACAO_MS = 3000;
 // Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
 // pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
 const DOLAR_POR_PONTO_OPERACAO = 20;
+// Pedido de 2026-08-07 (2ª vez): card de performance MNQ a mercado -- MNQ vale 1/10 do NQ
+// ($2/ponto em vez de $20/ponto), mesmo stop/alvo de 20 pontos.
+const DOLAR_POR_PONTO_MNQ = 2;
 // Pedido de 2026-08-05: custo de corretagem por contrato (1 NQ), abatido do P/L pra virar
 // líquido -- multiplica pelo total de operações resolvidas (cada uma negocia 1 contrato).
 const CUSTO_CORRETAGEM_POR_CONTRATO = 3.10;
@@ -92,7 +95,7 @@ const elementoPerf = {
   custos: document.getElementById("perf-custos"),
 };
 const elementoGraficoPatrimonio = document.getElementById("grafico-patrimonio");
-const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo:not(.aba-periodo-2)");
+const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo:not(.aba-periodo-2):not(.aba-periodo-mnq)");
 
 // Pedido de 2026-08-06: 2º card de performance, clone do de cima -- fica entre Registros e
 // Operações, contabilizando só o Resultado Análise (a única coluna de resultado que a tabela
@@ -110,6 +113,36 @@ const elementoPerf2 = {
 };
 const elementoGraficoPatrimonio2 = document.getElementById("grafico-patrimonio-2");
 const elementosAbaPeriodo2 = document.querySelectorAll(".aba-periodo-2");
+
+// Pedido de 2026-08-07 (2ª vez): 3º card de performance, entre Operações e Registro Operação a
+// Mercado MNQ -- usa direto operacoes_mnq_mercado.resultado_real (única coluna de resultado
+// dessa tabela) e $2/ponto do MNQ.
+const elementoPerfMnq = {
+  resultadoTotal: document.getElementById("perf-resultado-total-mnq"),
+  lucroBruto: document.getElementById("perf-lucro-bruto-mnq"),
+  prejuizoBruto: document.getElementById("perf-prejuizo-bruto-mnq"),
+  operacoes: document.getElementById("perf-operacoes-mnq"),
+  vencedoras: document.getElementById("perf-vencedoras-mnq"),
+  operacoesPositivas: document.getElementById("perf-operacoes-positivas-mnq"),
+  operacoesNegativas: document.getElementById("perf-operacoes-negativas-mnq"),
+  custos: document.getElementById("perf-custos-mnq"),
+};
+const elementoGraficoPatrimonioMnq = document.getElementById("grafico-patrimonio-mnq");
+const elementosAbaPeriodoMnq = document.querySelectorAll(".aba-periodo-mnq");
+
+let periodoSelecionadoMnq = "total";
+elementosAbaPeriodoMnq.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    periodoSelecionadoMnq = botao.dataset.periodo;
+    elementosAbaPeriodoMnq.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
+    atualizar();
+  });
+});
+
+// Sem cascata (ordem-limite/análise) igual o NQ -- essa tabela só tem resultado_real mesmo.
+function resultadoMnq(o) {
+  return o.resultado_real;
+}
 
 // Pedido de 2026-08-05: filtro de período pro gráfico de patrimônio (estilo relatório do
 // NinjaTrader) -- "diario" pega só o dia calendário mais recente presente nos dados (não
@@ -288,18 +321,18 @@ function resultadoAnalise(o) {
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
  *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
-function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo) {
+function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo, dolarPorPonto = DOLAR_POR_PONTO_OPERACAO, custoPorContrato = CUSTO_CORRETAGEM_POR_CONTRATO) {
   const comResultado = resolvidas.map((o) => ({ o, resultado: funcaoResultado(o) }));
   const gains = comResultado.filter((x) => x.resultado === "lucro");
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
-  const valoresGain = gains.map(() => DOLAR_POR_PONTO_OPERACAO * 20);
-  const valoresStop = stops.map(() => -DOLAR_POR_PONTO_OPERACAO * 20);
-  const custos = resolvidas.length * CUSTO_CORRETAGEM_POR_CONTRATO;
+  const valoresGain = gains.map(() => dolarPorPonto * 20);
+  const valoresStop = stops.map(() => -dolarPorPonto * 20);
+  const custos = resolvidas.length * custoPorContrato;
 
   let acumulado = 0;
   const curva = comResultado.map(({ o, resultado }) => {
     const pontos = resultado === "lucro" ? 20 : -20;
-    acumulado += pontos * DOLAR_POR_PONTO_OPERACAO - CUSTO_CORRETAGEM_POR_CONTRATO;
+    acumulado += pontos * dolarPorPonto - custoPorContrato;
     return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
@@ -520,6 +553,19 @@ async function atualizar() {
         </tr>
       `).join("")
       : '<tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>';
+
+    // Pedido de 2026-08-07 (2ª vez): card de performance da tabela MNQ a mercado -- só resolvidas
+    // (resultado_real lucro/prejuizo), mesmas abas de período (Diário/Semanal/Mensal/Todo
+    // período) das outras duas, com $2/ponto do MNQ.
+    const operacoesMnqResolvidas = filtrarPorPeriodo(
+      [...operacoesMnqMercado]
+        .filter((o) => o.resultado_real === "lucro" || o.resultado_real === "prejuizo")
+        .sort((a, b) => a.criado_em.localeCompare(b.criado_em)),
+      periodoSelecionadoMnq,
+    );
+    const resumoMnq = calcularResumoPerformance(operacoesMnqResolvidas, resultadoMnq, DOLAR_POR_PONTO_MNQ, 0);
+    preencherTiraPerformance(elementoPerfMnq, resumoMnq);
+    desenharGraficoPatrimonio(elementoGraficoPatrimonioMnq, resumoMnq.curva, "Mnq");
 
     // Pedido de 2026-08-07: MNQ a mercado, tabela separada -- já vem mais recente primeiro
     // (order criado_em desc na busca), sem filtro de período (mostra tudo até o limite).
