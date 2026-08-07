@@ -236,17 +236,23 @@ function somar(lista) {
 /** Só as operações resolvidas dentro do período escolhido nas abas (Diário/Semanal/Mensal/Todo
  *  período) -- "diario" usa a SESSÃO de mercado (19:00 até 19:00, mesmo corte diurno/noturno do
  *  resto do sistema -- ver CLAUDE.md), não a meia-noite do calendário. Corrigido em 2026-08-05:
- *  meia-noite cortava a sessão da noite ao meio, mostrando só metade das operações do dia. Ancora
- *  na operação mais recente (não "agora" no relógio do navegador), pra não zerar fora do horário
- *  de mercado. */
+ *  meia-noite cortava a sessão da noite ao meio, mostrando só metade das operações do dia.
+ *
+ *  Corrigido em 2026-08-06: "diario" agora ancora no horário ATUAL (agora), não mais na última
+ *  operação real -- bug real: virou 19h, mercado reabriu, mas o Ninja não tinha sido reativado
+ *  (nenhuma operação real nova), e o Diário continuava mostrando a sessão ANTERIOR inteira (a
+ *  âncora ficava presa na última operação real, que era de antes das 19h). Ancorar em "agora"
+ *  mostra corretamente vazio até a primeira operação real da sessão atual. Semanal/Mensal
+ *  continuam ancorados na operação mais recente (sem essa ambiguidade -- não muda). */
 function filtrarPorPeriodo(resolvidas, periodo) {
   if (periodo === "total" || resolvidas.length === 0) return resolvidas;
   const maisRecente = new Date(resolvidas[resolvidas.length - 1].criado_em);
   let corte;
   if (periodo === "diario") {
-    corte = new Date(maisRecente);
+    const agora = new Date();
+    corte = new Date(agora);
     corte.setHours(19, 0, 0, 0);
-    if (corte > maisRecente) corte.setDate(corte.getDate() - 1);
+    if (corte > agora) corte.setDate(corte.getDate() - 1);
   } else if (periodo === "semanal") {
     corte = new Date(maisRecente.getTime() - 7 * 24 * 60 * 60 * 1000);
   } else {
