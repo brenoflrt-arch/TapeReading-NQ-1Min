@@ -497,13 +497,14 @@ async function atualizar() {
     // Tabela nova "Operações" (lista separada, não influencia o resumo acima): pedido de
     // 2026-08-05 (2ª vez) -- agora é baseada em EXECUÇÃO REAL (preco_real_entrada preenchido e
     // resultado_real resolvido), não mais Resultado Ordem Limite, pra bater exatamente com o
-    // extrato do Ninja. Só mostra "hoje" (19h até agora/18h de amanhã, mesmo corte de sessão da
-    // aba Diário).
+    // extrato do Ninja. Pedido de 2026-08-06 (2ª vez): segue a mesma aba de período do card de
+    // performance de cima (periodoSelecionado) -- antes era fixa em "diario", agora mostra a
+    // semana/mês/tudo igual quando o usuário troca de aba ali.
     const operacoesReaisResolvidas = filtrarPorPeriodo(
       [...operacoesSimuladas]
         .filter((o) => o.preco_real_entrada != null && (o.resultado_real === "lucro" || o.resultado_real === "prejuizo"))
         .sort((a, b) => a.criado_em.localeCompare(b.criado_em)), // ordem crescente exigida por filtrarPorPeriodo
-      "diario",
+      periodoSelecionado,
     );
     // Pedido de 2026-08-06: mais recente primeiro na exibição -- inverte só aqui, depois do
     // filtro de período (que precisa da ordem crescente pra achar a "mais recente" certa).
