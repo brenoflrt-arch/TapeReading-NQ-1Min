@@ -115,7 +115,7 @@ const elementoGraficoPatrimonio2 = document.getElementById("grafico-patrimonio-2
 const elementosAbaPeriodo2 = document.querySelectorAll(".aba-periodo-2");
 
 // Pedido de 2026-08-07 (2ª vez): 3º card de performance, entre Operações e ENTRADA ORDEM LIMITE
-// TRAVA +5 -- usa direto operacoes_mnq_mercado.resultado_real (única coluna de resultado
+// MNQ (espelho NQ) -- usa direto operacoes_mnq_mercado.resultado_real (única coluna de resultado
 // dessa tabela) e $2/ponto do MNQ.
 const elementoPerfMnq = {
   resultadoTotal: document.getElementById("perf-resultado-total-mnq"),
