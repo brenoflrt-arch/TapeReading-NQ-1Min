@@ -163,9 +163,9 @@
     </div>
   </section>
 
-  <!-- Pedido de 2026-08-07 (2ª vez): card de performance com os dados da tabela MNQ a mercado
-       (operacoes_mnq_mercado), entre a tabela Operações e a tabela Registro Operação a Mercado
-       MNQ. Mesmo padrão dos outros 2 cards de performance, mas usa resultado_real diretamente
+  <!-- Pedido de 2026-08-07 (2ª vez): card de performance com os dados da tabela MNQ
+       (operacoes_mnq_mercado), entre a tabela Operações e a tabela ENTRADA ORDEM LIMITE TRAVA +5.
+       Mesmo padrão dos outros 2 cards de performance, mas usa resultado_real diretamente
        (única coluna de resultado que essa tabela tem, sem a cascata ordem-limite/análise do NQ) e
        $2/ponto do MNQ (não $20 do NQ) -- ver DOLAR_POR_PONTO_MNQ no app.js. -->
   <section class="cartao cartao-performance">
@@ -215,11 +215,12 @@
     <svg id="grafico-patrimonio-mnq" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
   </section>
 
-  <!-- Pedido de 2026-08-07: MNQ rodando em paralelo ao NQ, a MERCADO (não ordem limite),
-       validação 5/5/5 (espelha o NQ) -- tabela separada (operacoes_mnq_mercado) pra não misturar
-       com o NQ. -->
+  <!-- Pedido de 2026-08-10: MNQ deixou de ser espelho do NQ -- agora roda a estrategia PROPRIA do
+       "3o toque" (ordem LIMITE em trava+-5, sem esperar confirmacao). Mesma tabela Supabase
+       (operacoes_mnq_mercado), zerada em 2026-08-10 pra nao misturar com o historico do modelo
+       antigo (mercado, espelho do NQ). -->
   <section class="cartao">
-    <h2>Registro Operação a Mercado MNQ</h2>
+    <h2>ENTRADA ORDEM LIMITE TRAVA +5</h2>
     <div class="tabela-rolavel">
       <table class="tabela-padroes">
         <thead>
