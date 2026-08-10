@@ -62,6 +62,14 @@ elementoFormLogin.addEventListener("submit", async (evento) => {
 // producao) -- navegador exige um clique antes de liberar autoplay, daí o botão "Ativar som".
 let somHabilitado = false;
 let primeiraCarga = true;
+// Pedido de 2026-08-10: valores borrados (Resultado total/Lucro/Prejuízo/Custos) -- hover já
+// revela no desktop (CSS), aqui só cobre toque no celular (sem hover).
+document.querySelectorAll(".valor-borrado").forEach((elemento) => {
+  elemento.addEventListener("click", () => {
+    elemento.classList.toggle("revelado");
+  });
+});
+
 const idsOperacoesVistas = new Set();
 const audioCompradores = new Audio("sons/compradores_travando.mp3");
 const audioVendedores = new Audio("sons/vendedores_travando.mp3");

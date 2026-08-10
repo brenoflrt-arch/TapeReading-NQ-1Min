@@ -193,6 +193,19 @@ main {
 .tira-valor.positivo { color: #15803d; }
 .tira-valor.negativo { color: #ef5350; }
 
+/* Pedido de 2026-08-10: Resultado total / Lucro bruto / Prejuízo bruto / Custos ficam borrados
+   por padrão (valores em dinheiro) -- passa o mouse (ou toca, no celular) pra revelar. */
+.valor-borrado {
+  filter: blur(6px);
+  transition: filter 0.15s ease;
+  cursor: pointer;
+}
+.valor-borrado:hover,
+.valor-borrado:focus,
+.valor-borrado.revelado {
+  filter: none;
+}
+
 .performance-abas {
   display: flex;
   gap: 4px;
