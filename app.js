@@ -260,6 +260,15 @@ function celulaResultadoEntrada(op) {
   return `<span class="tag-resultado ${classe}">${op.resultado_real}</span>`;
 }
 
+// Pedido de 2026-08-10: resultado em PONTOS (não só lucro/prejuízo) -- pra saber quantos
+// pagaram o alvo (20) ou a proteção (1), mandado pelo Executor (C#) desde a reescrita sem ATM.
+function celulaResultadoPontos(op) {
+  if (op.resultado_real == null || op.resultado_pontos == null) return '<span class="detalhe-leve">—</span>';
+  const classe = op.resultado_real === "lucro" ? "lucro" : "prejuizo";
+  const sinal = op.resultado_pontos > 0 ? "+" : "";
+  return `<span class="tag-resultado ${classe}">${sinal}${op.resultado_pontos.toFixed(2)}</span>`;
+}
+
 // ---- Gráfico de performance (estilo relatório "Patrimônio" do NinjaTrader) ----
 
 function somar(lista) {
@@ -576,9 +585,10 @@ async function atualizar() {
           <td><span class="tag-operacao ${o.operacao}">${o.operacao}</span></td>
           <td>${formatarPreco(o.preco_real_entrada != null ? o.preco_real_entrada : o.preco_entrada)}</td>
           <td>${celulaResultadoEntrada(o)}</td>
+          <td>${celulaResultadoPontos(o)}</td>
         </tr>
       `).join("")
-      : '<tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda</td></tr>';
+      : '<tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda</td></tr>';
 
     const operacoesExibidas = operacoesSimuladas.slice(0, LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
     elementoCorpoTabelaOperacoesSimuladas.innerHTML = operacoesExibidas.length
