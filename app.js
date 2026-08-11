@@ -100,7 +100,6 @@ const elementoPerf = {
   vencedoras: document.getElementById("perf-vencedoras"),
   operacoesPositivas: document.getElementById("perf-operacoes-positivas"),
   operacoesNegativas: document.getElementById("perf-operacoes-negativas"),
-  custos: document.getElementById("perf-custos"),
 };
 const elementoGraficoPatrimonio = document.getElementById("grafico-patrimonio");
 const elementosAbaPeriodo = document.querySelectorAll(".aba-periodo:not(.aba-periodo-2):not(.aba-periodo-mnq)");
@@ -117,7 +116,6 @@ const elementoPerf2 = {
   vencedoras: document.getElementById("perf-vencedoras-2"),
   operacoesPositivas: document.getElementById("perf-operacoes-positivas-2"),
   operacoesNegativas: document.getElementById("perf-operacoes-negativas-2"),
-  custos: document.getElementById("perf-custos-2"),
 };
 const elementoGraficoPatrimonio2 = document.getElementById("grafico-patrimonio-2");
 const elementosAbaPeriodo2 = document.querySelectorAll(".aba-periodo-2");
@@ -133,7 +131,6 @@ const elementoPerfMnq = {
   vencedoras: document.getElementById("perf-vencedoras-mnq"),
   operacoesPositivas: document.getElementById("perf-operacoes-positivas-mnq"),
   operacoesNegativas: document.getElementById("perf-operacoes-negativas-mnq"),
-  custos: document.getElementById("perf-custos-mnq"),
 };
 const elementoGraficoPatrimonioMnq = document.getElementById("grafico-patrimonio-mnq");
 const elementosAbaPeriodoMnq = document.querySelectorAll(".aba-periodo-mnq");
@@ -342,18 +339,27 @@ function resultadoAnalise(o) {
 // cada operação (coluna nova em operacoes_mnq_mercado, default 1 se não existir -- é o caso do
 // NQ, que sempre negocia 1 contrato e nunca teve essa coluna). Sem isso, o financeiro do MNQ
 // ficava sempre calculado como se fosse 1 contrato, mesmo depois de mudar pra 2 (2026-08-10).
+// Pedido de 2026-08-11 (2ª mudança): usa resultado_pontos REAL da operação quando disponível
+// (extrato do NinjaTrader tem o preço exato de saída, que quase nunca é exatamente ±20 --
+// slippage/protected stop mudam o valor) -- só cai pro ±20 fixo se resultado_pontos for null
+// (bot ainda não sabe o ponto exato, caso comum pra operações novas até o extrato confirmar).
 function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo, dolarPorPonto = DOLAR_POR_PONTO_OPERACAO, custoPorContrato = CUSTO_CORRETAGEM_POR_CONTRATO) {
-  const comResultado = resolvidas.map((o) => ({ o, resultado: funcaoResultado(o), quantidade: o.quantidade || 1 }));
+  const comResultado = resolvidas.map((o) => ({
+    o,
+    resultado: funcaoResultado(o),
+    quantidade: o.quantidade || 1,
+    pontos: o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20,
+  }));
   const gains = comResultado.filter((x) => x.resultado === "lucro");
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
-  const valoresGain = gains.map((x) => dolarPorPonto * 20 * x.quantidade);
-  const valoresStop = stops.map((x) => -dolarPorPonto * 20 * x.quantidade);
+  const valoresGain = gains.map((x) => dolarPorPonto * x.pontos * x.quantidade);
+  const valoresStop = stops.map((x) => -dolarPorPonto * x.pontos * x.quantidade);
   const custos = resolvidas.length * custoPorContrato;
 
   let acumulado = 0;
-  const curva = comResultado.map(({ o, resultado, quantidade }) => {
-    const pontos = resultado === "lucro" ? 20 : -20;
-    acumulado += pontos * dolarPorPonto * quantidade - custoPorContrato;
+  const curva = comResultado.map(({ o, resultado, quantidade, pontos }) => {
+    const pontosComSinal = resultado === "lucro" ? pontos : -pontos;
+    acumulado += pontosComSinal * dolarPorPonto * quantidade - custoPorContrato;
     return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
@@ -383,7 +389,6 @@ function preencherTiraPerformance(el, resumo) {
   el.operacoesPositivas.className = "tira-valor positivo";
   el.operacoesNegativas.textContent = resumo.numOperacoesNegativas;
   el.operacoesNegativas.className = "tira-valor negativo";
-  el.custos.textContent = formatarDolar(resumo.custos);
 }
 
 /** Formata valores do eixo Y abreviados em milhares (estilo "4,33k"), igual o relatório de
