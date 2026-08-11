@@ -13,25 +13,14 @@
   <div class="status" id="status">conectando…</div>
 </header>
 
-<!-- Pedido de 2026-08-07: TODA a página passou a exigir login (antes só as 3 tabelas embaixo
-     eram protegidas; preço/performance ficavam públicos). Um único bloqueio (.protegido-total)
-     cobre tudo dentro de <main>, com um único formulário de login sobreposto em tela cheia
-     (position:fixed), em vez das 3 áreas restritas separadas que existiam antes. -->
+<!-- Pedido de 2026-08-11: reduzido a UM único card -- performance do Registros (Resultado
+     Análise), em pontos, sem operação/preço/horário/nível de nenhuma operação. O restante da
+     página (ticker de preço, tabelas linha-a-linha de Registros/Operações/MNQ, cards de
+     Operações e MNQ) foi removido -- o Supabase também não aceita mais leitura pública das
+     tabelas cruas (só a view registros_performance_publica, sem dado identificável, ver
+     supabase_bloquear_dados_publicos.sql). -->
 <main class="protegido-total" id="protegido-total" data-bloqueado="true">
   <div class="conteudo-protegido">
-  <section class="hero">
-    <div class="hero-preco">
-      <span class="hero-rotulo">NQ agora</span>
-      <span class="hero-valor" id="preco-valor">—</span>
-      <span class="hero-horario" id="preco-horario"></span>
-    </div>
-  </section>
-
-  <!-- Pedido de 2026-08-06: clone do card de performance de baixo, mas contabilizando só o
-       Resultado Análise (a mesma coluna única que a tabela Registros mostra agora) em vez da
-       fórmula resultadoEfetivo/resultado_real do card original. IDs com sufixo "-2" e classes
-       "-2" nas abas de período pra não colidir com o outro card (cada um tem seu próprio estado
-       de período selecionado). -->
   <section class="cartao cartao-performance">
     <div class="performance-tira">
       <div class="tira-item">
@@ -73,157 +62,6 @@
 
     <p class="performance-titulo-grafico">Patrimônio</p>
     <svg id="grafico-patrimonio-2" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
-  </section>
-
-  <section class="cartao">
-    <h2>Registros</h2>
-    <div class="tabela-rolavel">
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado Operação</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-operacoes-simuladas">
-          <tr><td colspan="4" class="linha-vazia">nenhuma operação simulada ainda</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pedido de 2026-08-05: produção roda SEM o filtro de formação mínima (3min) -- este
-         toggle compara "Real" (todas as operações, o que está acontecendo de fato na conta) vs
-         "Simulado com filtro 3min" (só o subconjunto que passaria nesse filtro, pra ver o que
-         teria acontecido se ele continuasse ligado). -->
-    <div class="performance-abas performance-abas-filtro" id="performance-abas-filtro">
-      <button class="aba-filtro aba-filtro-ativa" data-filtro="real" type="button">Real (sem filtro)</button>
-      <button class="aba-filtro" data-filtro="com_filtro_3min" type="button">Simulado (com filtro 3min)</button>
-    </div>
-  </section>
-
-  <section class="cartao cartao-performance">
-    <div class="performance-tira">
-      <div class="tira-item">
-        <span class="tira-rotulo">Resultado total</span>
-        <span class="tira-valor valor-borrado" id="perf-resultado-total">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Lucro bruto</span>
-        <span class="tira-valor valor-borrado" id="perf-lucro-bruto">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Prejuízo bruto</span>
-        <span class="tira-valor valor-borrado" id="perf-prejuizo-bruto">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações</span>
-        <span class="tira-valor" id="perf-operacoes">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Vencedoras</span>
-        <span class="tira-valor" id="perf-vencedoras">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações positivas</span>
-        <span class="tira-valor" id="perf-operacoes-positivas">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações negativas</span>
-        <span class="tira-valor" id="perf-operacoes-negativas">—</span>
-      </div>
-    </div>
-
-    <div class="performance-abas" id="performance-abas">
-      <button class="aba-periodo" data-periodo="diario" type="button">Diário</button>
-      <button class="aba-periodo" data-periodo="semanal" type="button">Semanal</button>
-      <button class="aba-periodo" data-periodo="mensal" type="button">Mensal</button>
-      <button class="aba-periodo aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
-    </div>
-
-    <p class="performance-titulo-grafico">Patrimônio</p>
-    <svg id="grafico-patrimonio" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
-  </section>
-
-  <section class="cartao">
-    <h2>Operações</h2>
-    <div class="tabela-rolavel">
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Nível entrada</th><th>Resultado entrada</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-operacoes">
-          <tr><td colspan="4" class="linha-vazia">nenhuma operação registrada ainda hoje</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Pedido de 2026-08-07 (2ª vez): card de performance com os dados da tabela MNQ
-       (operacoes_mnq_mercado), entre a tabela Operações e a tabela ENTRADA ORDEM LIMITE TRAVA +5.
-       Mesmo padrão dos outros 2 cards de performance, mas usa resultado_real diretamente
-       (única coluna de resultado que essa tabela tem, sem a cascata ordem-limite/análise do NQ) e
-       $2/ponto do MNQ (não $20 do NQ) -- ver DOLAR_POR_PONTO_MNQ no app.js. -->
-  <section class="cartao cartao-performance">
-    <div class="performance-tira">
-      <div class="tira-item">
-        <span class="tira-rotulo">Resultado total</span>
-        <span class="tira-valor valor-borrado" id="perf-resultado-total-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Lucro bruto</span>
-        <span class="tira-valor valor-borrado" id="perf-lucro-bruto-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Prejuízo bruto</span>
-        <span class="tira-valor valor-borrado" id="perf-prejuizo-bruto-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações</span>
-        <span class="tira-valor" id="perf-operacoes-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Vencedoras</span>
-        <span class="tira-valor" id="perf-vencedoras-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações positivas</span>
-        <span class="tira-valor" id="perf-operacoes-positivas-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Operações negativas</span>
-        <span class="tira-valor" id="perf-operacoes-negativas-mnq">—</span>
-      </div>
-      <div class="tira-item">
-        <span class="tira-rotulo">Custos</span>
-        <span class="tira-valor" id="perf-custos-mnq">—</span>
-      </div>
-    </div>
-
-    <div class="performance-abas" id="performance-abas-mnq">
-      <button class="aba-periodo aba-periodo-mnq" data-periodo="diario" type="button">Diário</button>
-      <button class="aba-periodo aba-periodo-mnq" data-periodo="semanal" type="button">Semanal</button>
-      <button class="aba-periodo aba-periodo-mnq" data-periodo="mensal" type="button">Mensal</button>
-      <button class="aba-periodo aba-periodo-mnq aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
-    </div>
-
-    <p class="performance-titulo-grafico">Patrimônio MNQ a Mercado</p>
-    <svg id="grafico-patrimonio-mnq" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
-  </section>
-
-  <!-- Pedido de 2026-08-10 (2ª mudança): MNQ voltou a ser espelho do NQ -- mesmo sinal ARMAR/
-       CANCELAR (nivel medio, 5/5/5), so a execucao (instrumento MNQ, 2 contratos) e diferente,
-       dimensionada pro capital real de $2.000/exposicao diaria de $1.200. Mesma tabela Supabase
-       (operacoes_mnq_mercado), zerada em 2026-08-10 pra nao misturar com o historico do
-       mecanismo do "3o toque" (testado entre as duas mudancas desse dia). -->
-  <section class="cartao">
-    <h2>ENTRADA ORDEM LIMITE MNQ (espelho NQ)</h2>
-    <div class="tabela-rolavel">
-      <table class="tabela-padroes">
-        <thead>
-          <tr><th>Horário</th><th>Operação</th><th>Entrada</th><th>Resultado</th><th>Resultado (pontos)</th></tr>
-        </thead>
-        <tbody id="corpo-tabela-mnq-mercado">
-          <tr><td colspan="5" class="linha-vazia">nenhuma operação registrada ainda</td></tr>
-        </tbody>
-      </table>
-    </div>
   </section>
   </div>
 
