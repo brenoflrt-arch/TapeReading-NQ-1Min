@@ -501,6 +501,24 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
     <path d="${caminhoLinha}" fill="none" stroke="url(#linhaPatrimonio${sufixoId})" stroke-width="1.75" />
     ${rotulosData}
   `;
+
+  // Pedido de 2026-08-11: viewBox 900x340 com preserveAspectRatio="none" estica X e Y em
+  // proporções diferentes pra preencher o card inteiro (necessário pro gráfico ocupar toda a
+  // largura disponível) -- isso deforma o texto dos rótulos junto (ficam espremidos/esticados de
+  // forma desigual, já que as letras vivem no mesmo sistema de coordenadas esticado). Corrige
+  // aplicando um scale horizontal inverso só nos <text>, compensando a diferença entre a escala X
+  // e Y realmente renderizada (medida depois de inserir no DOM).
+  const caixa = elementoSvg.getBoundingClientRect();
+  if (caixa.width > 0 && caixa.height > 0) {
+    const escalaX = caixa.width / largura;
+    const escalaY = caixa.height / altura;
+    const fatorCorrecao = escalaY / escalaX;
+    elementoSvg.querySelectorAll("text").forEach((texto) => {
+      const x = texto.getAttribute("x");
+      const y = texto.getAttribute("y");
+      texto.setAttribute("transform", `translate(${x} ${y}) scale(${fatorCorrecao.toFixed(4)} 1) translate(${-x} ${-y})`);
+    });
+  }
 }
 
 async function atualizar() {
