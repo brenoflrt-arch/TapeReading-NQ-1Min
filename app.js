@@ -14,6 +14,9 @@ const DOLAR_POR_PONTO_MNQ = 2;
 // Pedido de 2026-08-05: custo de corretagem por contrato (1 NQ), abatido do P/L pra virar
 // líquido -- multiplica pelo total de operações resolvidas (cada uma negocia 1 contrato).
 const CUSTO_CORRETAGEM_POR_CONTRATO = 3.10;
+// Pedido de 2026-08-11: Mesa Lucid cobra $0,50 por lado (entrada e saída) no MNQ -- $1,00
+// round-turn por contrato. Ver "pernasPorOperacao" em calcularResumoPerformance.
+const CUSTO_CORRETAGEM_POR_CONTRATO_MNQ = 0.50;
 const LIMITE_OPERACOES_SIMULADAS_EXIBIDAS = 200; // cobre um dia inteiro (hoje: ~25-30 operações)
 
 const elementoStatus = document.getElementById("status");
@@ -135,6 +138,7 @@ const elementoPerfMnq = {
   vencedoras: document.getElementById("perf-vencedoras-mnq"),
   operacoesPositivas: document.getElementById("perf-operacoes-positivas-mnq"),
   operacoesNegativas: document.getElementById("perf-operacoes-negativas-mnq"),
+  custos: document.getElementById("perf-custos-mnq"),
 };
 const elementoGraficoPatrimonioMnq = document.getElementById("grafico-patrimonio-mnq");
 const elementosAbaPeriodoMnq = document.querySelectorAll(".aba-periodo-mnq");
@@ -347,7 +351,11 @@ function resultadoAnalise(o) {
 // (extrato do NinjaTrader tem o preço exato de saída, que quase nunca é exatamente ±20 --
 // slippage/protected stop mudam o valor) -- só cai pro ±20 fixo se resultado_pontos for null
 // (bot ainda não sabe o ponto exato, caso comum pra operações novas até o extrato confirmar).
-function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo, dolarPorPonto = DOLAR_POR_PONTO_OPERACAO, custoPorContrato = CUSTO_CORRETAGEM_POR_CONTRATO) {
+// "pernasPorOperacao" (2026-08-11): custo cobrado por CONTRATO POR PERNA (entrada e saída cada
+// uma cobra) -- pro NQ (1 contrato, custo já era só por operação) fica 1 perna, sem mudar o
+// comportamento de sempre. Pro MNQ, 2 pernas × quantidade de contratos × $0,50 (confirmado pelo
+// usuário: $28 pra 56 contratos negociados = $0,50/contrato).
+function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo, dolarPorPonto = DOLAR_POR_PONTO_OPERACAO, custoPorContrato = CUSTO_CORRETAGEM_POR_CONTRATO, pernasPorOperacao = 1) {
   const comResultado = resolvidas.map((o) => ({
     o,
     resultado: funcaoResultado(o),
@@ -358,12 +366,12 @@ function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetiv
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
   const valoresGain = gains.map((x) => dolarPorPonto * x.pontos * x.quantidade);
   const valoresStop = stops.map((x) => -dolarPorPonto * x.pontos * x.quantidade);
-  const custos = resolvidas.length * custoPorContrato;
+  const custos = comResultado.reduce((acc, x) => acc + x.quantidade * pernasPorOperacao * custoPorContrato, 0);
 
   let acumulado = 0;
   const curva = comResultado.map(({ o, resultado, quantidade, pontos }) => {
     const pontosComSinal = resultado === "lucro" ? pontos : -pontos;
-    acumulado += pontosComSinal * dolarPorPonto * quantidade - custoPorContrato;
+    acumulado += pontosComSinal * dolarPorPonto * quantidade - quantidade * pernasPorOperacao * custoPorContrato;
     return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
@@ -393,6 +401,11 @@ function preencherTiraPerformance(el, resumo) {
   el.operacoesPositivas.className = "tira-valor positivo";
   el.operacoesNegativas.textContent = resumo.numOperacoesNegativas;
   el.operacoesNegativas.className = "tira-valor negativo";
+  // Pedido de 2026-08-11: campo Custos voltou só pro card MNQ (Mesa Lucid cobra por lado) --
+  // os outros cards não têm mais esse elemento no HTML, então "el.custos" fica undefined ali.
+  if (el.custos) {
+    el.custos.textContent = formatarDolar(-resumo.custos);
+  }
 }
 
 /** Formata valores do eixo Y abreviados em milhares (estilo "4,33k"), igual o relatório de
@@ -593,7 +606,7 @@ async function atualizar() {
         .sort((a, b) => a.criado_em.localeCompare(b.criado_em)),
       periodoSelecionadoMnq,
     );
-    const resumoMnq = calcularResumoPerformance(operacoesMnqResolvidas, resultadoMnq, DOLAR_POR_PONTO_MNQ, 0);
+    const resumoMnq = calcularResumoPerformance(operacoesMnqResolvidas, resultadoMnq, DOLAR_POR_PONTO_MNQ, CUSTO_CORRETAGEM_POR_CONTRATO_MNQ, 2);
     preencherTiraPerformance(elementoPerfMnq, resumoMnq);
     desenharGraficoPatrimonio(elementoGraficoPatrimonioMnq, resumoMnq.curva, "Mnq");
 
