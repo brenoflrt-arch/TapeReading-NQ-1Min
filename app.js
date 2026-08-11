@@ -231,7 +231,7 @@ async function buscarOperacoesSimuladas() {
 async function buscarOperacoesMnqMercado() {
   const { data, error } = await supabaseCliente
     .from("operacoes_mnq_mercado")
-    .select("id,operacao,preco_entrada,preco_real_entrada,status,resultado,resultado_real,resultado_pontos,horario_entrada,horario_resultado,criado_em")
+    .select("id,operacao,preco_entrada,preco_real_entrada,status,resultado,resultado_real,resultado_pontos,horario_entrada,horario_resultado,criado_em,quantidade")
     .not("status", "in", "(cancelada,descartada)")
     .order("criado_em", { ascending: false })
     .limit(LIMITE_OPERACOES_SIMULADAS_EXIBIDAS);
@@ -338,18 +338,22 @@ function resultadoAnalise(o) {
 
 /** Constrói a curva de patrimônio acumulado (líquido de corretagem) em ordem cronológica real
  *  (por data/hora, não só por índice) e o resumo pra tira de estatísticas no topo. */
+// Pedido de 2026-08-11: "dolarPorPonto" agora é POR CONTRATO -- multiplica pela "quantidade" de
+// cada operação (coluna nova em operacoes_mnq_mercado, default 1 se não existir -- é o caso do
+// NQ, que sempre negocia 1 contrato e nunca teve essa coluna). Sem isso, o financeiro do MNQ
+// ficava sempre calculado como se fosse 1 contrato, mesmo depois de mudar pra 2 (2026-08-10).
 function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetivo, dolarPorPonto = DOLAR_POR_PONTO_OPERACAO, custoPorContrato = CUSTO_CORRETAGEM_POR_CONTRATO) {
-  const comResultado = resolvidas.map((o) => ({ o, resultado: funcaoResultado(o) }));
+  const comResultado = resolvidas.map((o) => ({ o, resultado: funcaoResultado(o), quantidade: o.quantidade || 1 }));
   const gains = comResultado.filter((x) => x.resultado === "lucro");
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
-  const valoresGain = gains.map(() => dolarPorPonto * 20);
-  const valoresStop = stops.map(() => -dolarPorPonto * 20);
+  const valoresGain = gains.map((x) => dolarPorPonto * 20 * x.quantidade);
+  const valoresStop = stops.map((x) => -dolarPorPonto * 20 * x.quantidade);
   const custos = resolvidas.length * custoPorContrato;
 
   let acumulado = 0;
-  const curva = comResultado.map(({ o, resultado }) => {
+  const curva = comResultado.map(({ o, resultado, quantidade }) => {
     const pontos = resultado === "lucro" ? 20 : -20;
-    acumulado += pontos * dolarPorPonto - custoPorContrato;
+    acumulado += pontos * dolarPorPonto * quantidade - custoPorContrato;
     return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
