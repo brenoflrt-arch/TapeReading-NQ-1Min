@@ -253,6 +253,12 @@ function formatarDolar(valor) {
   return `${sinal}${Math.abs(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
 }
 
+// Pedido de 2026-08-11: card Registros (Resultado Análise) mostra pontos, não mais dólar.
+function formatarPontos(valor) {
+  const sinal = valor > 0 ? "+" : valor < 0 ? "-" : "";
+  return `${sinal}${Math.abs(valor).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} pts`;
+}
+
 // Resultado ANÁLISE: baseado no nível calculado (nível médio/referência), stop/alvo de
 // DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py -- é a simulação teórica,
 // não depende de execução real nenhuma.
@@ -388,12 +394,12 @@ function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoEfetiv
   };
 }
 
-function preencherTiraPerformance(el, resumo) {
-  el.resultadoTotal.textContent = formatarDolar(resumo.resultadoTotal);
+function preencherTiraPerformance(el, resumo, formatarValor = formatarDolar) {
+  el.resultadoTotal.textContent = formatarValor(resumo.resultadoTotal);
   el.resultadoTotal.className = "tira-valor " + (resumo.resultadoTotal >= 0 ? "positivo" : "negativo");
-  el.lucroBruto.textContent = formatarDolar(resumo.lucroBruto);
+  el.lucroBruto.textContent = formatarValor(resumo.lucroBruto);
   el.lucroBruto.className = "tira-valor positivo";
-  el.prejuizoBruto.textContent = formatarDolar(resumo.prejuizoBruto);
+  el.prejuizoBruto.textContent = formatarValor(resumo.prejuizoBruto);
   el.prejuizoBruto.className = "tira-valor negativo";
   el.operacoes.textContent = resumo.numOperacoes;
   el.vencedoras.textContent = `${resumo.taxaVencedoras.toFixed(2)}%`;
@@ -592,8 +598,10 @@ async function atualizar() {
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasAnaliseNoPeriodo = filtrarPorPeriodo(resolvidasAnalise, periodoSelecionado2);
-    const resumo2 = calcularResumoPerformance(resolvidasAnaliseNoPeriodo, resultadoAnalise, DOLAR_POR_PONTO_ANALISE);
-    preencherTiraPerformance(elementoPerf2, resumo2);
+    // Pedido de 2026-08-11: card Registros mostra PONTOS, não mais dólar, e sem descontar custo
+    // (dolarPorPonto=1 vira "pontos brutos", custoPorContrato=0 desliga o desconto).
+    const resumo2 = calcularResumoPerformance(resolvidasAnaliseNoPeriodo, resultadoAnalise, 1, 0);
+    preencherTiraPerformance(elementoPerf2, resumo2, formatarPontos);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo2.curva, "2");
 
     // Tabela nova "Operações" (lista separada, não influencia o resumo acima): pedido de
