@@ -508,14 +508,21 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
   // forma desigual, já que as letras vivem no mesmo sistema de coordenadas esticado). Corrige
   // aplicando um scale horizontal inverso só nos <text>, compensando a diferença entre a escala X
   // e Y realmente renderizada (medida depois de inserir no DOM).
+  // Pedido de 2026-08-11 (2ª mudança): no celular o card fica bem mais estreito e mais baixo, e
+  // como o font-size está em unidades do viewBox (900x340), ele encolhe junto com o container --
+  // ficava minúsculo. Recalcula o font-size em unidades do viewBox pra sempre renderizar em ~11px
+  // reais na tela, não importa o tamanho do card.
   const caixa = elementoSvg.getBoundingClientRect();
   if (caixa.width > 0 && caixa.height > 0) {
     const escalaX = caixa.width / largura;
     const escalaY = caixa.height / altura;
     const fatorCorrecao = escalaY / escalaX;
+    const FONTE_ALVO_PX = 11;
+    const fontSizeViewBox = (FONTE_ALVO_PX / escalaY).toFixed(2);
     elementoSvg.querySelectorAll("text").forEach((texto) => {
       const x = texto.getAttribute("x");
       const y = texto.getAttribute("y");
+      texto.setAttribute("font-size", fontSizeViewBox);
       texto.setAttribute("transform", `translate(${x} ${y}) scale(${fatorCorrecao.toFixed(4)} 1) translate(${-x} ${-y})`);
     });
   }
