@@ -4,6 +4,10 @@ const INTERVALO_ATUALIZACAO_MS = 3000;
 // Atualizado pelo usuário (2026-08-04): 1 NQ (não MNQ), U$400 por operação no alvo/stop de 20
 // pontos (DISTANCIA_STOP_ALVO_PONTOS do analisador_tentativas_pequenas.py) -- U$20 por ponto.
 const DOLAR_POR_PONTO_OPERACAO = 20;
+// Pedido de 2026-08-11: card Registros (Resultado Análise) passa a valer U$200 por operação
+// (U$10/ponto) em vez de U$400 -- separado do DOLAR_POR_PONTO_OPERACAO de cima, que continua
+// valendo só pro card Operações (entrada real do NQ).
+const DOLAR_POR_PONTO_ANALISE = 10;
 // Pedido de 2026-08-07 (2ª vez): card de performance MNQ a mercado -- MNQ vale 1/10 do NQ
 // ($2/ponto em vez de $20/ponto), mesmo stop/alvo de 20 pontos.
 const DOLAR_POR_PONTO_MNQ = 2;
@@ -251,7 +255,7 @@ function formatarDolar(valor) {
 function celulaResultadoAnalise(op) {
   if (op.status === "aberta") return '<span class="tag-resultado aberta">em aberto</span>';
   const classe = op.status === "gain" ? "lucro" : "prejuizo";
-  const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_OPERACAO;
+  const valorDolar = op.resultado_pontos * DOLAR_POR_PONTO_ANALISE;
   return `<span class="tag-resultado ${classe}">${formatarDolar(valorDolar)}</span>`;
 }
 
@@ -550,7 +554,7 @@ async function atualizar() {
       .filter((o) => filtroSelecionado === "real" || o.passaria_filtro_3min !== false)
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasAnaliseNoPeriodo = filtrarPorPeriodo(resolvidasAnalise, periodoSelecionado2);
-    const resumo2 = calcularResumoPerformance(resolvidasAnaliseNoPeriodo, resultadoAnalise);
+    const resumo2 = calcularResumoPerformance(resolvidasAnaliseNoPeriodo, resultadoAnalise, DOLAR_POR_PONTO_ANALISE);
     preencherTiraPerformance(elementoPerf2, resumo2);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo2.curva, "2");
 
