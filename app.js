@@ -78,6 +78,31 @@ elementosAbaPeriodo2.forEach((botao) => {
   });
 });
 
+// Filtro de horário (2026-08-20): independente das abas de período acima -- aplicado DEPOIS
+// do corte por data, sobre o que sobrar. "de" e "até" em HH:MM local, comparando só a hora do
+// dia de cada operação (não a data). Campo vazio de um lado = sem limite nesse lado.
+const elementoFiltroHorarioInicio2 = document.getElementById("filtro-horario-inicio-2");
+const elementoFiltroHorarioFim2 = document.getElementById("filtro-horario-fim-2");
+const elementoFiltroHorarioLimpar2 = document.getElementById("filtro-horario-limpar-2");
+
+elementoFiltroHorarioInicio2.addEventListener("change", atualizar);
+elementoFiltroHorarioFim2.addEventListener("change", atualizar);
+elementoFiltroHorarioLimpar2.addEventListener("click", () => {
+  elementoFiltroHorarioInicio2.value = "";
+  elementoFiltroHorarioFim2.value = "";
+  atualizar();
+});
+
+function filtrarPorHorario(resolvidas, inicio, fim) {
+  if (!inicio && !fim) return resolvidas;
+  return resolvidas.filter((o) => {
+    const hhmm = new Date(o.criado_em).toTimeString().slice(0, 5);
+    if (inicio && hhmm < inicio) return false;
+    if (fim && hhmm > fim) return false;
+    return true;
+  });
+}
+
 /** Pedido de 2026-08-11: só a view pública `registros_performance_publica` -- sem operação,
  *  preço, horário ou nível, só pontos/resultado/data. Ver supabase_bloquear_dados_publicos.sql. */
 async function buscarRegistrosPerformance() {
@@ -292,7 +317,12 @@ async function atualizar() {
       .filter((o) => o.status === "gain" || o.status === "stop")
       .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
     const resolvidasNoPeriodo = filtrarPorPeriodo(resolvidas, periodoSelecionado2);
-    const resumo = calcularResumoPerformance(resolvidasNoPeriodo);
+    const resolvidasNoHorario = filtrarPorHorario(
+      resolvidasNoPeriodo,
+      elementoFiltroHorarioInicio2.value,
+      elementoFiltroHorarioFim2.value
+    );
+    const resumo = calcularResumoPerformance(resolvidasNoHorario);
     preencherTiraPerformance(elementoPerf2, resumo, formatarPontos);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
 
