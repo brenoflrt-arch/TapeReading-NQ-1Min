@@ -309,6 +309,27 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
   }
 }
 
+const elementoTabelaRegistros2 = document.getElementById("tabela-registros-2");
+
+/** Lista simples horário + resultado, mais recente primeiro -- mesmo conjunto já filtrado por
+ *  período e horário que alimenta a tira e o gráfico, então fica sempre consistente com eles. */
+function preencherTabelaRegistros(el, resolvidas) {
+  if (resolvidas.length === 0) {
+    el.innerHTML = `<tr><td colspan="2" class="linha-vazia">nenhuma operação nesse filtro</td></tr>`;
+    return;
+  }
+  const linhas = [...resolvidas]
+    .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
+    .map((o) => {
+      const data = new Date(o.criado_em);
+      const horario = data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const rotulo = o.resultado === "lucro" ? "Lucro" : "Prejuízo";
+      return `<tr><td>${horario}</td><td><span class="tag-resultado ${o.resultado}">${rotulo}</span></td></tr>`;
+    })
+    .join("");
+  el.innerHTML = linhas;
+}
+
 async function atualizar() {
   try {
     const registros = await buscarRegistrosPerformance();
@@ -325,6 +346,7 @@ async function atualizar() {
     const resumo = calcularResumoPerformance(resolvidasNoHorario);
     preencherTiraPerformance(elementoPerf2, resumo, formatarPontos);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
+    preencherTabelaRegistros(elementoTabelaRegistros2, resolvidasNoHorario);
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";

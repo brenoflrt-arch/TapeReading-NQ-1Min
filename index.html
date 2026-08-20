@@ -60,6 +60,9 @@
       <button class="aba-periodo aba-periodo-2 aba-periodo-ativa" data-periodo="total" type="button">Todo período</button>
     </div>
 
+    <p class="performance-titulo-grafico">Patrimônio</p>
+    <svg id="grafico-patrimonio-2" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
+
     <div class="performance-filtro-horario" id="performance-filtro-horario-2">
       <label class="filtro-horario-rotulo" for="filtro-horario-inicio-2">Horário de</label>
       <input class="filtro-horario-input" id="filtro-horario-inicio-2" type="time" />
@@ -68,8 +71,18 @@
       <button class="filtro-horario-limpar" id="filtro-horario-limpar-2" type="button">Limpar</button>
     </div>
 
-    <p class="performance-titulo-grafico">Patrimônio</p>
-    <svg id="grafico-patrimonio-2" class="grafico-patrimonio" viewBox="0 0 900 340" preserveAspectRatio="none"></svg>
+    <p class="performance-titulo-grafico">Registro de operações</p>
+    <div class="tabela-rolavel">
+      <table>
+        <thead>
+          <tr>
+            <th>Horário</th>
+            <th>Resultado</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-registros-2"></tbody>
+      </table>
+    </div>
   </section>
   </div>
 
