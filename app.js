@@ -103,12 +103,63 @@ function filtrarPorHorario(resolvidas, inicio, fim) {
   });
 }
 
+// Pedido de 2026-08-21: card "Ordem limite (NQ) — preenchidas" -- mesmo modelo do card acima
+// (elementoPerf2/abas2/filtro2), sufixo "-3".
+const elementoPerf3 = {
+  resultadoTotal: document.getElementById("perf-resultado-total-3"),
+  lucroBruto: document.getElementById("perf-lucro-bruto-3"),
+  prejuizoBruto: document.getElementById("perf-prejuizo-bruto-3"),
+  operacoes: document.getElementById("perf-operacoes-3"),
+  vencedoras: document.getElementById("perf-vencedoras-3"),
+  operacoesPositivas: document.getElementById("perf-operacoes-positivas-3"),
+  operacoesNegativas: document.getElementById("perf-operacoes-negativas-3"),
+};
+const elementoGraficoPatrimonio3 = document.getElementById("grafico-patrimonio-3");
+const elementosAbaPeriodo3 = document.querySelectorAll(".aba-periodo-3");
+
+let periodoSelecionado3 = "total";
+elementosAbaPeriodo3.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    periodoSelecionado3 = botao.dataset.periodo;
+    elementosAbaPeriodo3.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
+    atualizar();
+  });
+});
+
+const elementoFiltroHorarioInicio3 = document.getElementById("filtro-horario-inicio-3");
+const elementoFiltroHorarioFim3 = document.getElementById("filtro-horario-fim-3");
+const elementoFiltroHorarioLimpar3 = document.getElementById("filtro-horario-limpar-3");
+
+elementoFiltroHorarioInicio3.addEventListener("change", atualizar);
+elementoFiltroHorarioFim3.addEventListener("change", atualizar);
+elementoFiltroHorarioLimpar3.addEventListener("click", () => {
+  elementoFiltroHorarioInicio3.value = "";
+  elementoFiltroHorarioFim3.value = "";
+  atualizar();
+});
+
+const elementoTabelaRegistros3 = document.getElementById("tabela-registros-3");
+
 /** Pedido de 2026-08-11: só a view pública `registros_performance_publica` -- sem operação,
  *  preço, horário ou nível, só pontos/resultado/data. Ver supabase_bloquear_dados_publicos.sql. */
 async function buscarRegistrosPerformance() {
   const { data, error } = await supabaseCliente
     .from("registros_performance_publica")
     .select("id,status,resultado,resultado_pontos,passaria_filtro_3min,criado_em")
+    .order("criado_em", { ascending: false })
+    .limit(LIMITE_REGISTROS);
+  if (error) throw error;
+  return data;
+}
+
+/** Pedido de 2026-08-21: mesma ideia, agora a partir de resultado_ordem_limite (simulação de
+ *  ordem limite parada no nível, só as que preencheram de verdade -- ver
+ *  supabase_registros_performance_ordem_limite.sql). A view já filtra
+ *  status/data (>= 07/08), então tudo que volta aqui já é "resolvida". */
+async function buscarRegistrosPerformanceOrdemLimite() {
+  const { data, error } = await supabaseCliente
+    .from("registros_performance_ordem_limite_publica")
+    .select("id,resultado,criado_em")
     .order("criado_em", { ascending: false })
     .limit(LIMITE_REGISTROS);
   if (error) throw error;
@@ -347,6 +398,21 @@ async function atualizar() {
     preencherTiraPerformance(elementoPerf2, resumo, formatarPontos);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
     preencherTabelaRegistros(elementoTabelaRegistros2, resolvidasNoHorario);
+
+    // Card "Ordem limite (NQ) — preenchidas" (2026-08-21) -- view já vem só com lucro/prejuizo
+    // (preenchidas) e >= 07/08, não precisa filtrar status aqui.
+    const registrosOrdemLimite = await buscarRegistrosPerformanceOrdemLimite();
+    const resolvidasOrdemLimite = [...registrosOrdemLimite].sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    const ordemLimiteNoPeriodo = filtrarPorPeriodo(resolvidasOrdemLimite, periodoSelecionado3);
+    const ordemLimiteNoHorario = filtrarPorHorario(
+      ordemLimiteNoPeriodo,
+      elementoFiltroHorarioInicio3.value,
+      elementoFiltroHorarioFim3.value
+    );
+    const resumoOrdemLimite = calcularResumoPerformance(ordemLimiteNoHorario);
+    preencherTiraPerformance(elementoPerf3, resumoOrdemLimite, formatarPontos);
+    desenharGraficoPatrimonio(elementoGraficoPatrimonio3, resumoOrdemLimite.curva, "3");
+    preencherTabelaRegistros(elementoTabelaRegistros3, ordemLimiteNoHorario);
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
