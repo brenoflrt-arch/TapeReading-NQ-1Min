@@ -182,8 +182,9 @@ function somar(lista) {
   return lista.reduce((a, b) => a + b, 0);
 }
 
-/** Mesmo corte usado sempre: "diario" usa a SESSÃO de mercado (19:00 até 19:00), Semanal/Mensal
- *  contam pra trás a partir da operação mais recente, "total" não filtra nada. */
+/** Mesmo corte usado sempre: "diario" usa a SESSÃO de mercado (19:00 até 19:00), "semanal" usa
+ *  a SEMANA de mercado (domingo 19:00 até sexta 18:00, mesmo horário de abertura/fechamento da
+ *  CME), "mensal" conta pra trás a partir da operação mais recente, "total" não filtra nada. */
 function filtrarPorPeriodo(resolvidas, periodo) {
   if (periodo === "total" || resolvidas.length === 0) return resolvidas;
   const maisRecente = new Date(resolvidas[resolvidas.length - 1].criado_em);
@@ -194,7 +195,11 @@ function filtrarPorPeriodo(resolvidas, periodo) {
     corte.setHours(19, 0, 0, 0);
     if (corte > agora) corte.setDate(corte.getDate() - 1);
   } else if (periodo === "semanal") {
-    corte = new Date(maisRecente.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const agora = new Date();
+    corte = new Date(agora);
+    corte.setHours(19, 0, 0, 0);
+    corte.setDate(corte.getDate() - corte.getDay());
+    if (corte > agora) corte.setDate(corte.getDate() - 7);
   } else {
     corte = new Date(maisRecente.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
