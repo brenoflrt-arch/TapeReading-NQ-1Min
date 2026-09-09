@@ -1,7 +1,7 @@
 const supabaseCliente = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const INTERVALO_ATUALIZACAO_MS = 3000;
-const LIMITE_REGISTROS = 5000; // cobre meses de histórico sem paginação
+const TAMANHO_PAGINA = 1000; // o projeto Supabase corta toda resposta REST em 1000 linhas (max-rows)
 
 const elementoStatus = document.getElementById("status");
 const elementoBotaoSom = document.getElementById("botao-som");
@@ -140,16 +140,32 @@ elementoFiltroHorarioLimpar3.addEventListener("click", () => {
 
 const elementoTabelaRegistros3 = document.getElementById("tabela-registros-3");
 
+/** O Supabase corta toda resposta REST em 1000 linhas (max-rows), então um `.limit(5000)` volta
+ *  calado só com as 1000 mais recentes -- a aba "Todo período" ficava incompleta (sumia a 1ª
+ *  semana de histórico e ia piorando a cada dia de operação nova). Aqui pagina via `.range()`
+ *  até a última página vir curta, trazendo o histórico inteiro (ordem crescente por data). */
+async function buscarTodasAsPaginas(tabela, colunas) {
+  let todas = [];
+  for (let inicio = 0; ; inicio += TAMANHO_PAGINA) {
+    const { data, error } = await supabaseCliente
+      .from(tabela)
+      .select(colunas)
+      .order("criado_em", { ascending: true })
+      .range(inicio, inicio + TAMANHO_PAGINA - 1);
+    if (error) throw error;
+    todas = todas.concat(data);
+    if (data.length < TAMANHO_PAGINA) break;
+  }
+  return todas;
+}
+
 /** Pedido de 2026-08-11: só a view pública `registros_performance_publica` -- sem operação,
  *  preço, horário ou nível, só pontos/resultado/data. Ver supabase_bloquear_dados_publicos.sql. */
 async function buscarRegistrosPerformance() {
-  const { data, error } = await supabaseCliente
-    .from("registros_performance_publica")
-    .select("id,status,resultado,resultado_pontos,passaria_filtro_3min,criado_em")
-    .order("criado_em", { ascending: false })
-    .limit(LIMITE_REGISTROS);
-  if (error) throw error;
-  return data;
+  return buscarTodasAsPaginas(
+    "registros_performance_publica",
+    "id,status,resultado,resultado_pontos,passaria_filtro_3min,criado_em"
+  );
 }
 
 /** Pedido de 2026-08-21: mesma ideia, agora a partir de resultado_ordem_limite (simulação de
@@ -157,13 +173,7 @@ async function buscarRegistrosPerformance() {
  *  supabase_registros_performance_ordem_limite.sql). A view já filtra
  *  status/data (>= 07/08), então tudo que volta aqui já é "resolvida". */
 async function buscarRegistrosPerformanceOrdemLimite() {
-  const { data, error } = await supabaseCliente
-    .from("registros_performance_ordem_limite_publica")
-    .select("id,resultado,criado_em")
-    .order("criado_em", { ascending: false })
-    .limit(LIMITE_REGISTROS);
-  if (error) throw error;
-  return data;
+  return buscarTodasAsPaginas("registros_performance_ordem_limite_publica", "id,resultado,criado_em");
 }
 
 function formatarDolar(valor) {
@@ -184,24 +194,22 @@ function somar(lista) {
 
 /** Mesmo corte usado sempre: "diario" usa a SESSÃO de mercado (19:00 até 19:00), "semanal" usa
  *  a SEMANA de mercado (domingo 19:00 até sexta 18:00, mesmo horário de abertura/fechamento da
- *  CME), "mensal" conta pra trás a partir da operação mais recente, "total" não filtra nada. */
+ *  CME), "mensal" é o mês-calendário corrente (dia 1, 00:00 local), "total" não filtra nada. */
 function filtrarPorPeriodo(resolvidas, periodo) {
   if (periodo === "total" || resolvidas.length === 0) return resolvidas;
-  const maisRecente = new Date(resolvidas[resolvidas.length - 1].criado_em);
+  const agora = new Date();
   let corte;
   if (periodo === "diario") {
-    const agora = new Date();
     corte = new Date(agora);
     corte.setHours(19, 0, 0, 0);
     if (corte > agora) corte.setDate(corte.getDate() - 1);
   } else if (periodo === "semanal") {
-    const agora = new Date();
     corte = new Date(agora);
     corte.setHours(19, 0, 0, 0);
     corte.setDate(corte.getDate() - corte.getDay());
     if (corte > agora) corte.setDate(corte.getDate() - 7);
   } else {
-    corte = new Date(maisRecente.getTime() - 30 * 24 * 60 * 60 * 1000);
+    corte = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
   }
   return resolvidas.filter((o) => new Date(o.criado_em) >= corte);
 }
@@ -366,6 +374,44 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
 }
 
 const elementoTabelaRegistros2 = document.getElementById("tabela-registros-2");
+const elementoTabelaMensal2 = document.getElementById("tabela-mensal-2");
+
+/** Quebra por mês-calendário (hora local): operações, % de acerto e resultado em pontos.
+ *  Independe da aba de período (que controla a tira/gráfico) -- só respeita o filtro de
+ *  horário, pra ficar coerente com o resto do card. Mês mais recente primeiro. */
+function preencherTabelaMensal(el, resolvidas) {
+  if (resolvidas.length === 0) {
+    el.innerHTML = `<tr><td colspan="4" class="linha-vazia">sem operações nesse filtro</td></tr>`;
+    return;
+  }
+  const meses = new Map();
+  for (const o of resolvidas) {
+    const d = new Date(o.criado_em);
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!meses.has(chave)) meses.set(chave, { n: 0, gains: 0, pts: 0 });
+    const m = meses.get(chave);
+    const pontos = o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20;
+    m.n += 1;
+    if (o.resultado === "lucro") {
+      m.gains += 1;
+      m.pts += pontos;
+    } else {
+      m.pts -= pontos;
+    }
+  }
+  const nomeMes = (chave) => {
+    const [ano, mes] = chave.split("-").map(Number);
+    return new Date(ano, mes - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+  };
+  el.innerHTML = [...meses.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([chave, m]) => {
+      const acerto = ((m.gains / m.n) * 100).toFixed(1);
+      const classe = m.pts >= 0 ? "lucro" : "prejuizo";
+      return `<tr><td>${nomeMes(chave)}</td><td>${m.n}</td><td>${acerto}%</td><td><span class="tag-resultado ${classe}">${formatarPontos(m.pts)}</span></td></tr>`;
+    })
+    .join("");
+}
 
 /** Lista simples horário + resultado, mais recente primeiro -- mesmo conjunto já filtrado por
  *  período e horário que alimenta a tira e o gráfico, então fica sempre consistente com eles. */
@@ -403,6 +449,10 @@ async function atualizar() {
     preencherTiraPerformance(elementoPerf2, resumo, formatarPontos);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
     preencherTabelaRegistros(elementoTabelaRegistros2, resolvidasNoHorario);
+    preencherTabelaMensal(
+      elementoTabelaMensal2,
+      filtrarPorHorario(resolvidas, elementoFiltroHorarioInicio2.value, elementoFiltroHorarioFim2.value)
+    );
 
     // Card "Ordem limite (NQ) — preenchidas" (2026-08-21) -- view já vem só com lucro/prejuizo
     // (preenchidas) e >= 07/08, não precisa filtrar status aqui.
