@@ -218,30 +218,46 @@ function resultadoAnalise(o) {
   return o.resultado;
 }
 
-/** Constrói a curva de patrimônio acumulado (em pontos, sem custo) e o resumo pra tira de
- *  estatísticas no topo. Usa resultado_pontos real quando disponível, senão ±20 fixo. */
-function calcularResumoPerformance(resolvidas, funcaoResultado = resultadoAnalise) {
-  const comResultado = resolvidas.map((o) => ({
-    o,
-    resultado: funcaoResultado(o),
-    pontos: o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20,
-  }));
+// Pedido de 2026-09-14: card "Registros" (Resultado Análise) passa a simular 5 contratos de MNQ
+// (US$2/ponto cada = US$10/ponto no total) em vez de mostrar pontos crus, com a corretagem real
+// descontada por operação resolvida (não por contrato individual dentro do bruto -- ver como
+// custoPorOperacao é usado abaixo, só no resultado líquido).
+const SIMULACAO_MNQ_REGISTROS = {
+  contratos: 5,
+  dolarPorPonto: 2, // MNQ = 1/10 do valor do tick do NQ
+  custoPorContrato: 0.5, // USD, cobrado 1x por operação resolvida (não por perna)
+};
+
+/** Constrói a curva de patrimônio acumulado e o resumo pra tira de estatísticas no topo. Usa
+ *  resultado_pontos real quando disponível, senão ±20 fixo. Sem `simulacao`, os valores continuam
+ *  em pontos puros (card "Ordem limite"); com `simulacao` (contratos/dolarPorPonto/custoPorContrato),
+ *  vira dólares -- Lucro/Prejuízo Bruto ficam sem custo (é a soma bruta dos contratos), a corretagem
+ *  só desconta do Resultado Total e da curva de patrimônio (que é o valor líquido acumulado). */
+function calcularResumoPerformance(resolvidas, { funcaoResultado = resultadoAnalise, simulacao = null } = {}) {
+  const custoPorOperacao = simulacao ? simulacao.contratos * simulacao.custoPorContrato : 0;
+  const comResultado = resolvidas.map((o) => {
+    const pontos = o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20;
+    const bruto = simulacao ? pontos * simulacao.contratos * simulacao.dolarPorPonto : pontos;
+    return { o, resultado: funcaoResultado(o), bruto };
+  });
   const gains = comResultado.filter((x) => x.resultado === "lucro");
   const stops = comResultado.filter((x) => x.resultado === "prejuizo");
-  const valoresGain = gains.map((x) => x.pontos);
-  const valoresStop = stops.map((x) => -x.pontos);
+  const lucroBruto = somar(gains.map((x) => x.bruto));
+  const prejuizoBruto = -somar(stops.map((x) => x.bruto));
+  const custoTotal = resolvidas.length * custoPorOperacao;
 
   let acumulado = 0;
-  const curva = comResultado.map(({ o, resultado, pontos }) => {
-    acumulado += resultado === "lucro" ? pontos : -pontos;
+  const curva = comResultado.map(({ o, resultado, bruto }) => {
+    acumulado += (resultado === "lucro" ? bruto : -bruto) - custoPorOperacao;
     return { valor: acumulado, data: new Date(o.criado_em), status: resultado === "lucro" ? "gain" : "stop" };
   });
 
   return {
     curva,
-    resultadoTotal: somar(valoresGain) + somar(valoresStop),
-    lucroBruto: somar(valoresGain),
-    prejuizoBruto: somar(valoresStop),
+    resultadoTotal: lucroBruto + prejuizoBruto - custoTotal,
+    lucroBruto,
+    prejuizoBruto,
+    custoTotal,
     numOperacoes: resolvidas.length,
     numOperacoesPositivas: gains.length,
     numOperacoesNegativas: stops.length,
@@ -376,28 +392,28 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
 const elementoTabelaRegistros2 = document.getElementById("tabela-registros-2");
 const elementoTabelaMensal2 = document.getElementById("tabela-mensal-2");
 
-/** Quebra por mês-calendário (hora local): operações, % de acerto e resultado em pontos.
- *  Independe da aba de período (que controla a tira/gráfico) -- só respeita o filtro de
- *  horário, pra ficar coerente com o resto do card. Mês mais recente primeiro. */
+/** Quebra por mês-calendário (hora local): operações, % de acerto e resultado em dólares (mesma
+ *  simulação de 5 MNQ + corretagem do resto do card, ver SIMULACAO_MNQ_REGISTROS). Independe da
+ *  aba de período (que controla a tira/gráfico) -- só respeita o filtro de horário, pra ficar
+ *  coerente com o resto do card. Mês mais recente primeiro. */
 function preencherTabelaMensal(el, resolvidas) {
   if (resolvidas.length === 0) {
     el.innerHTML = `<tr><td colspan="4" class="linha-vazia">sem operações nesse filtro</td></tr>`;
     return;
   }
+  const { contratos, dolarPorPonto, custoPorContrato } = SIMULACAO_MNQ_REGISTROS;
+  const custoPorOperacao = contratos * custoPorContrato;
   const meses = new Map();
   for (const o of resolvidas) {
     const d = new Date(o.criado_em);
     const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (!meses.has(chave)) meses.set(chave, { n: 0, gains: 0, pts: 0 });
+    if (!meses.has(chave)) meses.set(chave, { n: 0, gains: 0, valor: 0 });
     const m = meses.get(chave);
     const pontos = o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20;
+    const bruto = pontos * contratos * dolarPorPonto;
     m.n += 1;
-    if (o.resultado === "lucro") {
-      m.gains += 1;
-      m.pts += pontos;
-    } else {
-      m.pts -= pontos;
-    }
+    if (o.resultado === "lucro") m.gains += 1;
+    m.valor += (o.resultado === "lucro" ? bruto : -bruto) - custoPorOperacao;
   }
   const nomeMes = (chave) => {
     const [ano, mes] = chave.split("-").map(Number);
@@ -407,8 +423,8 @@ function preencherTabelaMensal(el, resolvidas) {
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([chave, m]) => {
       const acerto = ((m.gains / m.n) * 100).toFixed(1);
-      const classe = m.pts >= 0 ? "lucro" : "prejuizo";
-      return `<tr><td>${nomeMes(chave)}</td><td>${m.n}</td><td>${acerto}%</td><td><span class="tag-resultado ${classe}">${formatarPontos(m.pts)}</span></td></tr>`;
+      const classe = m.valor >= 0 ? "lucro" : "prejuizo";
+      return `<tr><td>${nomeMes(chave)}</td><td>${m.n}</td><td>${acerto}%</td><td><span class="tag-resultado ${classe}">${formatarDolar(m.valor)}</span></td></tr>`;
     })
     .join("");
 }
@@ -445,8 +461,8 @@ async function atualizar() {
       elementoFiltroHorarioInicio2.value,
       elementoFiltroHorarioFim2.value
     );
-    const resumo = calcularResumoPerformance(resolvidasNoHorario);
-    preencherTiraPerformance(elementoPerf2, resumo, formatarPontos);
+    const resumo = calcularResumoPerformance(resolvidasNoHorario, { simulacao: SIMULACAO_MNQ_REGISTROS });
+    preencherTiraPerformance(elementoPerf2, resumo, formatarDolar);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
     preencherTabelaRegistros(elementoTabelaRegistros2, resolvidasNoHorario);
     preencherTabelaMensal(
