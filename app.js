@@ -140,6 +140,43 @@ elementoFiltroHorarioLimpar3.addEventListener("click", () => {
 
 const elementoTabelaRegistros3 = document.getElementById("tabela-registros-3");
 
+// Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- mesmo modelo do card "Ordem limite"
+// acima (elementoPerf3/abas3/filtro3), sufixo "-4".
+const elementoPerf4 = {
+  resultadoTotal: document.getElementById("perf-resultado-total-4"),
+  lucroBruto: document.getElementById("perf-lucro-bruto-4"),
+  prejuizoBruto: document.getElementById("perf-prejuizo-bruto-4"),
+  operacoes: document.getElementById("perf-operacoes-4"),
+  vencedoras: document.getElementById("perf-vencedoras-4"),
+  operacoesPositivas: document.getElementById("perf-operacoes-positivas-4"),
+  operacoesNegativas: document.getElementById("perf-operacoes-negativas-4"),
+};
+const elementoGraficoPatrimonio4 = document.getElementById("grafico-patrimonio-4");
+const elementosAbaPeriodo4 = document.querySelectorAll(".aba-periodo-4");
+
+let periodoSelecionado4 = "total";
+elementosAbaPeriodo4.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    periodoSelecionado4 = botao.dataset.periodo;
+    elementosAbaPeriodo4.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
+    atualizar();
+  });
+});
+
+const elementoFiltroHorarioInicio4 = document.getElementById("filtro-horario-inicio-4");
+const elementoFiltroHorarioFim4 = document.getElementById("filtro-horario-fim-4");
+const elementoFiltroHorarioLimpar4 = document.getElementById("filtro-horario-limpar-4");
+
+elementoFiltroHorarioInicio4.addEventListener("change", atualizar);
+elementoFiltroHorarioFim4.addEventListener("change", atualizar);
+elementoFiltroHorarioLimpar4.addEventListener("click", () => {
+  elementoFiltroHorarioInicio4.value = "";
+  elementoFiltroHorarioFim4.value = "";
+  atualizar();
+});
+
+const elementoTabelaRegistros4 = document.getElementById("tabela-registros-4");
+
 /** O Supabase corta toda resposta REST em 1000 linhas (max-rows), então um `.limit(5000)` volta
  *  calado só com as 1000 mais recentes -- a aba "Todo período" ficava incompleta (sumia a 1ª
  *  semana de histórico e ia piorando a cada dia de operação nova). Aqui pagina via `.range()`
@@ -174,6 +211,16 @@ async function buscarRegistrosPerformance() {
  *  status/data (>= 07/08), então tudo que volta aqui já é "resolvida". */
 async function buscarRegistrosPerformanceOrdemLimite() {
   return buscarTodasAsPaginas("registros_performance_ordem_limite_publica", "id,resultado,criado_em");
+}
+
+/** Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- operações reais do bot Volumetric,
+ *  mesmo modelo do card "Ordem limite" (ver supabase_operacoes_volumetric.sql). A view já
+ *  filtra resultado in ('lucro','prejuizo'), então tudo que volta aqui já é "resolvida". */
+async function buscarRegistrosPerformanceVolumetric() {
+  return buscarTodasAsPaginas(
+    "registros_performance_volumetric_publica",
+    "id,resultado,resultado_pontos,criado_em"
+  );
 }
 
 function formatarDolar(valor) {
