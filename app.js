@@ -103,45 +103,8 @@ function filtrarPorHorario(resolvidas, inicio, fim) {
   });
 }
 
-// Pedido de 2026-08-21: card "Ordem limite (NQ) — preenchidas" -- mesmo modelo do card acima
-// (elementoPerf2/abas2/filtro2), sufixo "-3".
-const elementoPerf3 = {
-  resultadoTotal: document.getElementById("perf-resultado-total-3"),
-  lucroBruto: document.getElementById("perf-lucro-bruto-3"),
-  prejuizoBruto: document.getElementById("perf-prejuizo-bruto-3"),
-  operacoes: document.getElementById("perf-operacoes-3"),
-  vencedoras: document.getElementById("perf-vencedoras-3"),
-  operacoesPositivas: document.getElementById("perf-operacoes-positivas-3"),
-  operacoesNegativas: document.getElementById("perf-operacoes-negativas-3"),
-};
-const elementoGraficoPatrimonio3 = document.getElementById("grafico-patrimonio-3");
-const elementosAbaPeriodo3 = document.querySelectorAll(".aba-periodo-3");
-
-let periodoSelecionado3 = "total";
-elementosAbaPeriodo3.forEach((botao) => {
-  botao.addEventListener("click", () => {
-    periodoSelecionado3 = botao.dataset.periodo;
-    elementosAbaPeriodo3.forEach((b) => b.classList.toggle("aba-periodo-ativa", b === botao));
-    atualizar();
-  });
-});
-
-const elementoFiltroHorarioInicio3 = document.getElementById("filtro-horario-inicio-3");
-const elementoFiltroHorarioFim3 = document.getElementById("filtro-horario-fim-3");
-const elementoFiltroHorarioLimpar3 = document.getElementById("filtro-horario-limpar-3");
-
-elementoFiltroHorarioInicio3.addEventListener("change", atualizar);
-elementoFiltroHorarioFim3.addEventListener("change", atualizar);
-elementoFiltroHorarioLimpar3.addEventListener("click", () => {
-  elementoFiltroHorarioInicio3.value = "";
-  elementoFiltroHorarioFim3.value = "";
-  atualizar();
-});
-
-const elementoTabelaRegistros3 = document.getElementById("tabela-registros-3");
-
-// Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- mesmo modelo do card "Ordem limite"
-// acima (elementoPerf3/abas3/filtro3), sufixo "-4".
+// Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- mesmo modelo do antigo card "Ordem
+// limite" (removido), sufixo "-4".
 const elementoPerf4 = {
   resultadoTotal: document.getElementById("perf-resultado-total-4"),
   lucroBruto: document.getElementById("perf-lucro-bruto-4"),
@@ -203,14 +166,6 @@ async function buscarRegistrosPerformance() {
     "registros_performance_publica",
     "id,status,resultado,resultado_pontos,passaria_filtro_3min,criado_em"
   );
-}
-
-/** Pedido de 2026-08-21: mesma ideia, agora a partir de resultado_ordem_limite (simulação de
- *  ordem limite parada no nível, só as que preencheram de verdade -- ver
- *  supabase_registros_performance_ordem_limite.sql). A view já filtra
- *  status/data (>= 07/08), então tudo que volta aqui já é "resolvida". */
-async function buscarRegistrosPerformanceOrdemLimite() {
-  return buscarTodasAsPaginas("registros_performance_ordem_limite_publica", "id,resultado,criado_em");
 }
 
 /** Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- operações reais do bot Volumetric,
@@ -517,20 +472,20 @@ async function atualizar() {
       filtrarPorHorario(resolvidas, elementoFiltroHorarioInicio2.value, elementoFiltroHorarioFim2.value)
     );
 
-    // Card "Ordem limite (NQ) — preenchidas" (2026-08-21) -- view já vem só com lucro/prejuizo
-    // (preenchidas) e >= 07/08, não precisa filtrar status aqui.
-    const registrosOrdemLimite = await buscarRegistrosPerformanceOrdemLimite();
-    const resolvidasOrdemLimite = [...registrosOrdemLimite].sort((a, b) => a.criado_em.localeCompare(b.criado_em));
-    const ordemLimiteNoPeriodo = filtrarPorPeriodo(resolvidasOrdemLimite, periodoSelecionado3);
-    const ordemLimiteNoHorario = filtrarPorHorario(
-      ordemLimiteNoPeriodo,
-      elementoFiltroHorarioInicio3.value,
-      elementoFiltroHorarioFim3.value
+    // Card "Volumetric (NQ/MNQ)" (2026-09-15) -- view já vem só com lucro/prejuizo, não
+    // precisa filtrar status aqui.
+    const registrosVolumetric = await buscarRegistrosPerformanceVolumetric();
+    const resolvidasVolumetric = [...registrosVolumetric].sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    const volumetricNoPeriodo = filtrarPorPeriodo(resolvidasVolumetric, periodoSelecionado4);
+    const volumetricNoHorario = filtrarPorHorario(
+      volumetricNoPeriodo,
+      elementoFiltroHorarioInicio4.value,
+      elementoFiltroHorarioFim4.value
     );
-    const resumoOrdemLimite = calcularResumoPerformance(ordemLimiteNoHorario);
-    preencherTiraPerformance(elementoPerf3, resumoOrdemLimite, formatarPontos);
-    desenharGraficoPatrimonio(elementoGraficoPatrimonio3, resumoOrdemLimite.curva, "3");
-    preencherTabelaRegistros(elementoTabelaRegistros3, ordemLimiteNoHorario);
+    const resumoVolumetric = calcularResumoPerformance(volumetricNoHorario);
+    preencherTiraPerformance(elementoPerf4, resumoVolumetric, formatarPontos);
+    desenharGraficoPatrimonio(elementoGraficoPatrimonio4, resumoVolumetric.curva, "4");
+    preencherTabelaRegistros(elementoTabelaRegistros4, volumetricNoHorario);
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
