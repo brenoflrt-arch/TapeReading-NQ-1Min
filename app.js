@@ -198,7 +198,7 @@ async function buscarRegistrosPerformance() {
 async function buscarRegistrosPerformanceVolumetric() {
   return buscarTodasAsPaginas(
     "registros_performance_volumetric_publica",
-    "id,resultado,resultado_pontos,preco_entrada,preco_entrada_executado,criado_em"
+    "id,resultado,resultado_pontos,preco_entrada,preco_entrada_executado,direcao,criado_em"
   );
 }
 
@@ -494,7 +494,8 @@ function preencherTabelaRegistrosVolumetric(el, resolvidas) {
       const data = new Date(o.criado_em);
       const horario = data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
       const rotulo = o.resultado === "lucro" ? "Lucro" : "Prejuízo";
-      return `<tr><td>${horario}</td><td><span class="tag-resultado ${o.resultado}">${rotulo}</span></td><td>${formatarPreco(o.preco_entrada)}</td><td>${formatarPreco(o.preco_entrada_executado)}</td></tr>`;
+      const direcaoRotulo = o.direcao === "compra" ? "C" : o.direcao === "venda" ? "V" : "";
+      return `<tr><td>${horario}</td><td><span class="tag-resultado ${o.resultado}">${rotulo}</span> <span class="tag-direcao">${direcaoRotulo}</span></td><td>${formatarPreco(o.preco_entrada)}</td><td>${formatarPreco(o.preco_entrada_executado)}</td></tr>`;
     })
     .join("");
   el.innerHTML = linhas;

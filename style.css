@@ -421,6 +421,21 @@ tbody tr:hover td {
 .tag-resultado.lucro { background: rgba(21, 128, 61, 0.18); color: #15803d; }
 .tag-resultado.prejuizo { background: rgba(239, 83, 80, 0.18); color: #ef5350; }
 
+/* Pedido de 2026-09-17: C/V ao lado do badge de Resultado, no card Volumetric, pra indicar
+   compra ou venda sem precisar de outra coluna. */
+.tag-direcao {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: #999;
+}
+
 /* ---- área restrita (tabela de operações) ---- */
 
 /* Pedido de 2026-08-07: um único bloqueio cobre a página inteira (preço, performance e
