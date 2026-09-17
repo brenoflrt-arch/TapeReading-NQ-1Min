@@ -235,6 +235,15 @@ main {
   color: #ffffff;
 }
 
+/* Separador entre as abas de período (verde) e o toggle Pontos/Financeiro (azul, .aba-filtro)
+   dentro da mesma barra .performance-abas. */
+.separador-abas {
+  width: 1px;
+  align-self: stretch;
+  background: #262626;
+  margin: 0 4px;
+}
+
 /* Filtro de horário (2026-08-20) -- independente das abas de período acima, aplicado em
    conjunto: as abas cortam por data, isso corta por hora do dia dentro do que sobrou. */
 .performance-filtro-horario {

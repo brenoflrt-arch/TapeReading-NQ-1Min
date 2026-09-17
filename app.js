@@ -78,6 +78,18 @@ elementosAbaPeriodo2.forEach((botao) => {
   });
 });
 
+// Toggle Pontos/Financeiro (2026-09-16), ao lado das abas de período -- independente delas,
+// só decide se a tira/gráfico/tabelas mostram pontos crus ou a simulação de 5 MNQ em USD.
+const elementosAbaModo2 = document.querySelectorAll(".aba-modo-2");
+let modoSelecionado2 = "dolar";
+elementosAbaModo2.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    modoSelecionado2 = botao.dataset.modo;
+    elementosAbaModo2.forEach((b) => b.classList.toggle("aba-filtro-ativa", b === botao));
+    atualizar();
+  });
+});
+
 // Filtro de horário (2026-08-20): independente das abas de período acima -- aplicado DEPOIS
 // do corte por data, sobre o que sobrar. "de" e "até" em HH:MM local, comparando só a hora do
 // dia de cada operação (não a data). Campo vazio de um lado = sem limite nesse lado.
@@ -126,6 +138,16 @@ elementosAbaPeriodo4.forEach((botao) => {
   });
 });
 
+const elementosAbaModo4 = document.querySelectorAll(".aba-modo-4");
+let modoSelecionado4 = "pontos";
+elementosAbaModo4.forEach((botao) => {
+  botao.addEventListener("click", () => {
+    modoSelecionado4 = botao.dataset.modo;
+    elementosAbaModo4.forEach((b) => b.classList.toggle("aba-filtro-ativa", b === botao));
+    atualizar();
+  });
+});
+
 const elementoFiltroHorarioInicio4 = document.getElementById("filtro-horario-inicio-4");
 const elementoFiltroHorarioFim4 = document.getElementById("filtro-horario-fim-4");
 const elementoFiltroHorarioLimpar4 = document.getElementById("filtro-horario-limpar-4");
@@ -170,11 +192,13 @@ async function buscarRegistrosPerformance() {
 
 /** Pedido de 2026-09-15: card "Volumetric (NQ/MNQ)" -- operações reais do bot Volumetric,
  *  mesmo modelo do card "Ordem limite" (ver supabase_operacoes_volumetric.sql). A view já
- *  filtra resultado in ('lucro','prejuizo'), então tudo que volta aqui já é "resolvida". */
+ *  filtra resultado in ('lucro','prejuizo'), então tudo que volta aqui já é "resolvida".
+ *  Pedido de 2026-09-17: preco_entrada (sinal) e preco_entrada_executado (fill real via EXEC
+ *  da strategy) pra tabela mostrar as duas colunas -- só essa view expõe preço publicamente. */
 async function buscarRegistrosPerformanceVolumetric() {
   return buscarTodasAsPaginas(
     "registros_performance_volumetric_publica",
-    "id,resultado,resultado_pontos,criado_em"
+    "id,resultado,resultado_pontos,preco_entrada,preco_entrada_executado,criado_em"
   );
 }
 
@@ -224,7 +248,9 @@ function resultadoAnalise(o) {
 // (US$2/ponto cada = US$10/ponto no total) em vez de mostrar pontos crus, com a corretagem real
 // descontada por operação resolvida (não por contrato individual dentro do bruto -- ver como
 // custoPorOperacao é usado abaixo, só no resultado líquido).
-const SIMULACAO_MNQ_REGISTROS = {
+// Pedido de 2026-09-16: mesma simulação agora reaproveitada pelo toggle Pontos/Financeiro dos
+// dois cards (Registros e Volumetric) -- por isso o nome deixou de levar o sufixo "REGISTROS".
+const SIMULACAO_MNQ = {
   contratos: 5,
   dolarPorPonto: 2, // MNQ = 1/10 do valor do tick do NQ
   custoPorContrato: 0.5, // USD, cobrado 1x por operação resolvida (não por perna)
@@ -394,17 +420,16 @@ function desenharGraficoPatrimonio(elementoSvg, curva, sufixoId = "") {
 const elementoTabelaRegistros2 = document.getElementById("tabela-registros-2");
 const elementoTabelaMensal2 = document.getElementById("tabela-mensal-2");
 
-/** Quebra por mês-calendário (hora local): operações, % de acerto e resultado em dólares (mesma
- *  simulação de 5 MNQ + corretagem do resto do card, ver SIMULACAO_MNQ_REGISTROS). Independe da
- *  aba de período (que controla a tira/gráfico) -- só respeita o filtro de horário, pra ficar
- *  coerente com o resto do card. Mês mais recente primeiro. */
-function preencherTabelaMensal(el, resolvidas) {
+/** Quebra por mês-calendário (hora local): operações, % de acerto e resultado -- em pontos ou na
+ *  simulação de 5 MNQ + corretagem, conforme o toggle Pontos/Financeiro do card (ver
+ *  SIMULACAO_MNQ). Independe da aba de período (que controla a tira/gráfico) -- só respeita o
+ *  filtro de horário, pra ficar coerente com o resto do card. Mês mais recente primeiro. */
+function preencherTabelaMensal(el, resolvidas, { simulacao = null, formatarValor = formatarDolar } = {}) {
   if (resolvidas.length === 0) {
     el.innerHTML = `<tr><td colspan="4" class="linha-vazia">sem operações nesse filtro</td></tr>`;
     return;
   }
-  const { contratos, dolarPorPonto, custoPorContrato } = SIMULACAO_MNQ_REGISTROS;
-  const custoPorOperacao = contratos * custoPorContrato;
+  const custoPorOperacao = simulacao ? simulacao.contratos * simulacao.custoPorContrato : 0;
   const meses = new Map();
   for (const o of resolvidas) {
     const d = new Date(o.criado_em);
@@ -412,7 +437,7 @@ function preencherTabelaMensal(el, resolvidas) {
     if (!meses.has(chave)) meses.set(chave, { n: 0, gains: 0, valor: 0 });
     const m = meses.get(chave);
     const pontos = o.resultado_pontos != null ? Math.abs(o.resultado_pontos) : 20;
-    const bruto = pontos * contratos * dolarPorPonto;
+    const bruto = simulacao ? pontos * simulacao.contratos * simulacao.dolarPorPonto : pontos;
     m.n += 1;
     if (o.resultado === "lucro") m.gains += 1;
     m.valor += (o.resultado === "lucro" ? bruto : -bruto) - custoPorOperacao;
@@ -426,7 +451,7 @@ function preencherTabelaMensal(el, resolvidas) {
     .map(([chave, m]) => {
       const acerto = ((m.gains / m.n) * 100).toFixed(1);
       const classe = m.valor >= 0 ? "lucro" : "prejuizo";
-      return `<tr><td>${nomeMes(chave)}</td><td>${m.n}</td><td>${acerto}%</td><td><span class="tag-resultado ${classe}">${formatarDolar(m.valor)}</span></td></tr>`;
+      return `<tr><td>${nomeMes(chave)}</td><td>${m.n}</td><td>${acerto}%</td><td><span class="tag-resultado ${classe}">${formatarValor(m.valor)}</span></td></tr>`;
     })
     .join("");
 }
@@ -450,6 +475,31 @@ function preencherTabelaRegistros(el, resolvidas) {
   el.innerHTML = linhas;
 }
 
+/** Pedido de 2026-09-17: só a tabela do card Volumetric mostra preço (entrada do sinal vs.
+ *  fill real do EXEC da strategy) -- tabela separada da de cima pra não mexer no card "Ordem
+ *  limite", que continua sem preço por design (ver buscarRegistrosPerformance). */
+function formatarPreco(valor) {
+  if (valor === null || valor === undefined) return "—";
+  return Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function preencherTabelaRegistrosVolumetric(el, resolvidas) {
+  if (resolvidas.length === 0) {
+    el.innerHTML = `<tr><td colspan="4" class="linha-vazia">nenhuma operação nesse filtro</td></tr>`;
+    return;
+  }
+  const linhas = [...resolvidas]
+    .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
+    .map((o) => {
+      const data = new Date(o.criado_em);
+      const horario = data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const rotulo = o.resultado === "lucro" ? "Lucro" : "Prejuízo";
+      return `<tr><td>${horario}</td><td><span class="tag-resultado ${o.resultado}">${rotulo}</span></td><td>${formatarPreco(o.preco_entrada)}</td><td>${formatarPreco(o.preco_entrada_executado)}</td></tr>`;
+    })
+    .join("");
+  el.innerHTML = linhas;
+}
+
 async function atualizar() {
   try {
     const registros = await buscarRegistrosPerformance();
@@ -463,13 +513,16 @@ async function atualizar() {
       elementoFiltroHorarioInicio2.value,
       elementoFiltroHorarioFim2.value
     );
-    const resumo = calcularResumoPerformance(resolvidasNoHorario, { simulacao: SIMULACAO_MNQ_REGISTROS });
-    preencherTiraPerformance(elementoPerf2, resumo, formatarDolar);
+    const simulacao2 = modoSelecionado2 === "dolar" ? SIMULACAO_MNQ : null;
+    const formatarValor2 = modoSelecionado2 === "dolar" ? formatarDolar : formatarPontos;
+    const resumo = calcularResumoPerformance(resolvidasNoHorario, { simulacao: simulacao2 });
+    preencherTiraPerformance(elementoPerf2, resumo, formatarValor2);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio2, resumo.curva, "2");
     preencherTabelaRegistros(elementoTabelaRegistros2, resolvidasNoHorario);
     preencherTabelaMensal(
       elementoTabelaMensal2,
-      filtrarPorHorario(resolvidas, elementoFiltroHorarioInicio2.value, elementoFiltroHorarioFim2.value)
+      filtrarPorHorario(resolvidas, elementoFiltroHorarioInicio2.value, elementoFiltroHorarioFim2.value),
+      { simulacao: simulacao2, formatarValor: formatarValor2 }
     );
 
     // Card "Volumetric (NQ/MNQ)" (2026-09-15) -- view já vem só com lucro/prejuizo, não
@@ -482,10 +535,12 @@ async function atualizar() {
       elementoFiltroHorarioInicio4.value,
       elementoFiltroHorarioFim4.value
     );
-    const resumoVolumetric = calcularResumoPerformance(volumetricNoHorario);
-    preencherTiraPerformance(elementoPerf4, resumoVolumetric, formatarPontos);
+    const simulacao4 = modoSelecionado4 === "dolar" ? SIMULACAO_MNQ : null;
+    const formatarValor4 = modoSelecionado4 === "dolar" ? formatarDolar : formatarPontos;
+    const resumoVolumetric = calcularResumoPerformance(volumetricNoHorario, { simulacao: simulacao4 });
+    preencherTiraPerformance(elementoPerf4, resumoVolumetric, formatarValor4);
     desenharGraficoPatrimonio(elementoGraficoPatrimonio4, resumoVolumetric.curva, "4");
-    preencherTabelaRegistros(elementoTabelaRegistros4, volumetricNoHorario);
+    preencherTabelaRegistrosVolumetric(elementoTabelaRegistros4, volumetricNoHorario);
 
     elementoStatus.textContent = `ao vivo — ${resolvidas.length} operações resolvidas (atualizado ${new Date().toLocaleTimeString("pt-BR")})`;
     elementoStatus.className = "status ok";
